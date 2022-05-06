@@ -2,10 +2,14 @@ import numpy as np
 import qiskit as qk
 import matplotlib.pyplot as plt
 import multiprocessing as mp
+import torch
+
 from qiskit.quantum_info import DensityMatrix
 from qiskit.quantum_info import Operator
 from scipy.linalg import sqrtm
 from tqdm.notebook import tqdm
+from sqrtm import sqrtm
+
 
 def numberToBase(n, b, num_digits):
     digits = []
@@ -22,16 +26,16 @@ def partial_trace(X, discard_first = True):
     d = int(np.sqrt(X.shape[0]))
     X = X.reshape(d,d,d,d)
     if discard_first:
-        Y = np.einsum("ijik->jk", X)
+        Y = torch.einsum("ijik->jk", X)
     else:
-        Y = np.einsum("jiki->jk", X)
+        Y = torch.einsum("jiki->jk", X)
     return Y
 
 
 def state_fidelity(A, B):
     sqrtA = sqrtm(A)
-    fidelity = np.trace(sqrtm(sqrtA@B@sqrtA))
-    return np.abs(fidelity)
+    fidelity = torch.trace(sqrtm(sqrtA@B@sqrtA))
+    return fidelity
 
 
 def apply_map(state, choi):
@@ -83,17 +87,26 @@ def bitstring_density(state, basis):
 
 
 def generate_ginibre(dim1, dim2, real = False):
-    ginibre = np.random.normal(0, 1, (dim1, dim2))
+    ginibre = torch.random.normal(0, 1, (dim1, dim2))
     if not real:
-         ginibre = ginibre + 1j*np.random.normal(0, 1, (dim1, dim2))
+         ginibre = ginibre + 1j*torch.random.normal(0, 1, (dim1, dim2))
     return ginibre
 
 
 def generate_state(dim1, dim2):
     X = generate_ginibre(dim1, dim2)
 
-    state = X@X.conj().T/np.trace(X@X.conj().T)
+    state = X@X.conj().T/torch.trace(X@X.conj().T)
     return state
+
+def square_inverse(X):
+    L, V = torch.linalg.eigh(X)
+    L = 1/torch.sqrt(L)
+    X = torch.zeros_like(X)
+    for l, v in zip(L, V):
+        X += l*torch.conj(v.reshape(-1,1))@v.reshape(1,-1)
+
+    return X
 
 
 def generate_choi(X):
@@ -109,73 +122,6 @@ def generate_choi(X):
 
     return choi
 
-
-class Adam():
-    def __init__(self, dims, lr=0.01, beta1=0.9, beta2=0.999, eps=1e-8):
-        self.lr = lr
-        self.beta1 = beta1
-        self.beta2 = beta2
-        self.eps = eps
-
-        self.t = 0
-        self.m = np.zeros(dims, dtype="complex128")
-        self.v = np.zeros(dims, dtype="complex128")
-
-
-    def __call__(self, gradient):
-        self.t += 1
-
-        self.m = self.beta1 * self.m + (1 - self.beta1) * gradient
-        self.v = self.beta2 * self.v + (1 - self.beta2) * np.abs(gradient)**2
-
-        m_hat = self.m / (1 - self.beta1**self.t)
-        v_hat = self.v / (1 - self.beta2**self.t)
-        gradient_modified = m_hat / (np.sqrt(v_hat) + self.eps)
-
-        return gradient_modified
-
-
-def calculate_gradient(inputs):
-    self = inputs[0]
-    j = inputs[1]
-
-    h = self.h
-    state_input = self.state_input
-    state_target = self.state_target
-    X_model = np.copy(self.X_model)
-    gradient_vector = np.zeros(self.d**2, dtype = "complex128")
-    for i in range(self.d**2):
-        #Finite difference, real value
-        X_model[i, j] += h
-        choi_plus = generate_choi(X_model)
-        state_plus = apply_map(state_input, choi_plus)
-        fid_plus = state_fidelity(state_plus, state_target)
-
-        X_model[i, j] -= 2*h
-        choi_minus = generate_choi(X_model)
-        state_minus = apply_map(state_input, choi_minus)
-        fid_minus = state_fidelity(state_minus, state_target)
-        X_model[i, j] += h
-
-        grad = (fid_plus-fid_minus)/h
-        gradient_vector[i] += grad
-
-        #Finite difference, imaginary value
-        X_model[i, j] += 1j*h
-        choi_plus = generate_choi(X_model)
-        state_plus = apply_map(state_input, choi_plus)
-        fid_plus = state_fidelity(state_plus, state_target)
-
-        X_model[i, j] -= 2j*h
-        choi_minus = generate_choi(X_model)
-        state_minus = apply_map(state_input, choi_minus)
-        fid_minus = state_fidelity(state_minus, state_target)
-        X_model[i, j] += 1j*h
-
-        grad = 1j*(fid_plus-fid_minus)/h
-        gradient_vector[i] += grad
-
-    return gradient_vector
 
 
 class ModelQuantumMap:
@@ -201,16 +147,6 @@ class ModelQuantumMap:
             index = np.random.randint(0, len(self.state_input_list)-1)
             self.state_input = self.state_input_list[index]
             self.state_target = self.state_target_list[index]
-
-            # Finite difference over all parameters
-            input_list = [(self, j) for j in range(self.rank)]
-            with mp.Pool(num_workers) as pool:
-                grad_matrix = np.array(pool.map(calculate_gradient, input_list)).T
-
-            if use_adam:
-                grad_matrix = self.adam(grad_matrix)
-
-            self.X_model += self.lr*grad_matrix
 
             choi_model = generate_choi(self.X_model)
             state_model = apply_map(self.state_input, choi_model)
