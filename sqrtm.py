@@ -6,14 +6,13 @@ import scipy.linalg
 
 class MatrixSquareRoot(Function):
     """Square root of a positive definite matrix.
-
     NOTE: matrix square root is not differentiable for matrices with
           zero eigenvalues.
     """
     @staticmethod
     def forward(ctx, input):
-        m = input.detach().cpu().numpy().astype(np.float_)
-        sqrtm = torch.from_numpy(scipy.linalg.sqrtm(m).real).to(input)
+        m = input.detach().cpu().numpy().astype(np.complex128)
+        sqrtm = torch.from_numpy(scipy.linalg.sqrtm(m)).to(input)
         ctx.save_for_backward(sqrtm)
         return sqrtm
 
@@ -22,8 +21,8 @@ class MatrixSquareRoot(Function):
         grad_input = None
         if ctx.needs_input_grad[0]:
             sqrtm, = ctx.saved_tensors
-            sqrtm = sqrtm.data.cpu().numpy().astype(np.float_)
-            gm = grad_output.data.cpu().numpy().astype(np.float_)
+            sqrtm = sqrtm.data.cpu().numpy().astype(np.complex128)
+            gm = grad_output.data.cpu().numpy().astype(np.complex128)
 
             # Given a positive semi-definite matrix X,
             # since X = X^{1/2}X^{1/2}, we can compute the gradient of the

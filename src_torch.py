@@ -33,8 +33,8 @@ def partial_trace(X, discard_first = True):
 
 
 def state_fidelity(A, B):
-    sqrtA = sqrtm(A)
-    fidelity = torch.trace(sqrtm(sqrtA@B@sqrtA))
+    sqrtB = square_root(B)
+    fidelity = torch.trace(square_root(sqrtB@A@sqrtB))
     return fidelity
 
 
@@ -74,7 +74,7 @@ def prepare_input(config, return_unitary = False):
             circuit.s(i)
 
     if not return_unitary:
-        state = DensityMatrix(circuit).data
+        state = torch.from_numpy(DensityMatrix(circuit).data).type(torch.complex128)
     else:
         state = Operator(circuit).data
 
@@ -87,10 +87,10 @@ def bitstring_density(state, basis):
 
 
 def generate_ginibre(dim1, dim2, real = False):
-    ginibre = torch.random.normal(0, 1, (dim1, dim2))
+    ginibre = np.random.normal(0, 1, (dim1, dim2))
     if not real:
-         ginibre = ginibre + 1j*torch.random.normal(0, 1, (dim1, dim2))
-    return ginibre
+         ginibre = ginibre + 1j*np.random.normal(0, 1, (dim1, dim2))
+    return torch.from_numpy(ginibre).type(torch.complex128)
 
 
 def generate_state(dim1, dim2):
@@ -99,26 +99,34 @@ def generate_state(dim1, dim2):
     state = X@X.conj().T/torch.trace(X@X.conj().T)
     return state
 
-def square_inverse(X):
-    L, V = torch.linalg.eigh(X)
-    L = 1/torch.sqrt(L)
-    X = torch.zeros_like(X)
-    for l, v in zip(L, V):
-        X += l*torch.conj(v.reshape(-1,1))@v.reshape(1,-1)
+def square_root_inverse(A):
+    A = sqrtm(A)
+    A = torch.inverse(A).contiguous()
+    
+    return A
 
-    return X
+def square_root(A):
+    L, V = torch.linalg.eig(A)
+    L = torch.sqrt(L)
+
+    B = torch.zeros_like(A)
+    for l, v in zip(L, V.T):
+        B += l*torch.conj(v.reshape(-1,1))@v.reshape(1,-1)
+
+    return B
 
 
 def generate_choi(X):
     d = int(np.sqrt(X.shape[0]))  # dim of Hilbert space
-    I = np.eye(d)
+    I = torch.eye(d).type(torch.complex128)
+    XX = X@X.T.conj()
 
     #partial trace
-    Y = partial_trace(X@(X.conj().T), discard_first = True)
-    sqrtYinv = np.linalg.inv(sqrtm(Y))
+    Y = square_root_inverse(partial_trace(XX, discard_first=True))
+    Ykron = torch.kron(I, Y).T
 
     #choi
-    choi = np.kron(I, sqrtYinv)@X@(X.conj().T)@np.kron(I, sqrtYinv)
+    choi = Ykron@XX@Ykron
 
     return choi
 
