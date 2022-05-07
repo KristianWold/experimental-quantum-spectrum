@@ -8,7 +8,6 @@ from qiskit.quantum_info import DensityMatrix
 from qiskit.quantum_info import Operator
 from scipy.linalg import sqrtm
 from tqdm.notebook import tqdm
-from sqrtm import sqrtm
 
 
 def numberToBase(n, b, num_digits):
@@ -100,10 +99,14 @@ def generate_state(dim1, dim2):
     return state
 
 def square_root_inverse(A):
-    A = sqrtm(A)
-    A = torch.inverse(A).contiguous()
-    
-    return A
+    L, V = torch.linalg.eig(A)
+    L = 1/torch.sqrt(L)
+
+    B = torch.zeros_like(A)
+    for l, v in zip(L, V.T):
+        B += l*torch.conj(v.reshape(-1,1))@v.reshape(1,-1)
+
+    return B
 
 def square_root(A):
     L, V = torch.linalg.eig(A)
