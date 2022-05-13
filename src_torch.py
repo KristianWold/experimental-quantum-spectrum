@@ -49,6 +49,12 @@ def apply_map(state, choi):
     state = (choi@state).reshape(d, d)
     return state
 
+def apply_kraus(state, kraus_list):
+    state = [K.T.conj()@state@K for K in kraus_list]
+    state = torch.stack(state, dim=0).sum(dim=0)
+
+    return state
+
 
 def prepare_input(config, return_unitary = False):
     """1 = |0>, 2 = |1>, 3 = |+>, 4 = |->, 5 = |+i>, 6 = |-i>"""
@@ -80,16 +86,16 @@ def prepare_input(config, return_unitary = False):
     return state
 
 
-def bitstring_density(state, basis):
-
-    return np.abs(np.diag(basis.conj().T@state@basis))
-
-
-def generate_ginibre(dim1, dim2, real = False):
-    ginibre = np.random.normal(0, 1, (dim1, dim2))
-    if not real:
-         ginibre = ginibre + 1j*np.random.normal(0, 1, (dim1, dim2))
-    return torch.from_numpy(ginibre).type(torch.complex128)
+def generate_ginibre(dim1, dim2, requires_grad=False):
+    A = np.random.normal(0, 1, (dim1, dim2))
+    A = torch.from_numpy(A).type(torch.complex128)
+    B = np.random.normal(0, 1, (dim1, dim2))
+    B = torch.from_numpy(B).type(torch.complex128)
+    if requires_grad:
+        ginibre = A.requires_grad_() + 1j*B.requires_grad_()
+    else:
+        ginibre = A + 1j*B
+    return ginibre, A, B
 
 
 def generate_state(dim1, dim2):
@@ -132,6 +138,14 @@ def generate_choi(X):
     choi = Ykron@XX@Ykron
 
     return choi
+
+def generate_kraus(X, d, rank):
+    #U, _, _ = torch.svd(X)
+    Q, R = torch.linalg.qr(X)
+    #U = Q@torch.diag(torch.sgn(torch.diag(R)))
+    kraus_list = [Q[i*d:(i+1)*d, :d] for i in range(rank)]
+
+    return kraus_list, U, Q, R
 
 
 

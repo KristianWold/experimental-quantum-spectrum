@@ -2,12 +2,13 @@ import numpy as np
 import qiskit as qk
 import matplotlib.pyplot as plt
 import multiprocessing as mp
-import random
+import tensorflow as tf
+
 from qiskit.quantum_info import DensityMatrix
 from qiskit.quantum_info import Operator
 from scipy.linalg import sqrtm
-from scipy.linalg import cholesky
 from tqdm.notebook import tqdm
+
 
 def numberToBase(n, b, num_digits):
     digits = []
@@ -19,53 +20,36 @@ def numberToBase(n, b, num_digits):
         digits.append(0)
     return digits[::-1]
 
-
 #@profile
 def partial_trace(X, discard_first = True):
     d = int(np.sqrt(X.shape[0]))
-    X = X.reshape(d,d,d,d)
+    X = tf.reshape(X, (d,d,d,d))
     if discard_first:
-        Y = np.einsum("ijik->jk", X)
+        Y = tf.einsum("ijik->jk", X)
     else:
-        Y = np.einsum("jiki->jk", X)
+        Y = tf.einsum("jiki->jk", X)
     return Y
-
 
 #@profile
 def state_fidelity(A, B):
-
-    sqrtB = sqrtm(B)
-    C = sqrtB@A@sqrtB
-
-    fidelity = np.trace(sqrtm(C))
-    return np.abs(fidelity)
-
-def state_norm(A, B):
-
-    norm = 1 - np.linalg.norm(A - B)
-    return np.abs(norm)
-
+    sqrtB = tf.linalg.sqrtm(B)
+    fidelity = tf.linalg.trace(tf.linalg.sqrtm(sqrtB@A@sqrtB))
+    return fidelity
 
 #@profile
 def apply_map(state, choi):
     d = state.shape[0]
-    #A = np.random.normal(0, 1, (d,d))
-    #reg = A@A.T# + 1e-8*A
 
     #reshuffle
-    choi = choi.reshape(d,d,d,d).swapaxes(1,2).reshape(d**2, d**2)
+    choi = tf.reshape(choi, (d,d,d,d))
+    choi = tf.transpose(choi, perm = [0,2,1,3])
+    choi = tf.reshape(choi, (d**2,d**2))
 
     #flatten
-    state = state.reshape(-1, 1)
+    state = tf.reshape(state, (d**2, 1))
 
-    state = (choi@state).reshape(d, d)
+    state = tf.reshape(choi@state, (d, d))
     return state
-
-def apply_kraus(state, kraus_list):
-    state = sum([K@state@K.T.conj() for K in kraus_list])
-
-    return state
-
 
 #@profile
 def prepare_input(config, return_unitary = False):
@@ -91,72 +75,45 @@ def prepare_input(config, return_unitary = False):
             circuit.s(i)
 
     if not return_unitary:
-        state = DensityMatrix(circuit).data
+        state = tf.convert_to_tensor(DensityMatrix(circuit).data, dtype=tf.complex128)
     else:
         state = Operator(circuit).data
 
     return state
 
 
-def sample_bitstring(state, basis, return_index):
-    N = state.shape[0]
-    n = np.log(N)
-    state = basis@state@basis.T.conj()
-    probs = np.abs(np.diag(state))
-    index = np.random.choice(range(N), p = probs)
+def bitstring_density(state, basis):
 
-    if return_index:
-        output = index
-    else:
-        output = numberToBase(index, 2, n)
-
-    return output
-
-
-def likelihood(state, data):
-    pass
-
-
+    return np.abs(np.diag(basis.conj().T@state@basis))
 
 #@profile
 def generate_ginibre(dim1, dim2, real = False):
     ginibre = np.random.normal(0, 1, (dim1, dim2))
     if not real:
          ginibre = ginibre + 1j*np.random.normal(0, 1, (dim1, dim2))
-    return ginibre
+    return tf.convert_to_tensor(ginibre, dtype=tf.complex128)
 
 
 def generate_state(dim1, dim2):
     X = generate_ginibre(dim1, dim2)
 
-    state = X@X.conj().T/np.trace(X@X.conj().T)
+    state = X@X.conj().T/torch.trace(X@X.conj().T)
     return state
-
 
 #@profile
 def generate_choi(X):
     d = int(np.sqrt(X.shape[0]))  # dim of Hilbert space
-    I = np.eye(d)
-    XX = X@X.conj().T
+    I = tf.eye(d, dtype = tf.complex128)
+    XX = X@tf.linalg.adjoint(X)
+
     #partial trace
-    Y = partial_trace(XX)
-    Y = sqrtm(Y)
-    Y = np.linalg.inv(Y)
-    Ykron = np.kron(I, Y)
+    Y = tf.linalg.sqrtm(tf.linalg.inv(partial_trace(XX)))
+    Ykron = tf.experimental.numpy.kron(I, Y)
 
     #choi
     choi = Ykron@XX@Ykron
 
     return choi
-
-def generate_kraus(X, d, rank):
-    #U, _, _ = torch.svd(X)
-    U, _ = np.linalg.qr(X)
-    #U = Q@torch.diag(torch.sgn(torch.diag(R)))
-    kraus_list = [U[i*d:(i+1)*d, :d] for i in range(rank)]
-
-    return kraus_list
-
 
 class Adam():
     def __init__(self, dims, lr=0.01, beta1=0.9, beta2=0.999, eps=1e-8):
@@ -183,6 +140,7 @@ class Adam():
         return gradient_modified
 
 
+
 class ModelQuantumMap:
 
     def __init__(self, n, rank, state_input_list, state_target_list, lr, h):
@@ -199,61 +157,74 @@ class ModelQuantumMap:
         self.adam = Adam(dims = (self.d**2, self.rank))
         self.fid_list = []
 
-#    @profile
+    #@profile
     def train(self, num_iter, use_adam=False):
 
         for step in tqdm(range(num_iter)):
-            index = np.random.randint(len(self.state_input_list))
+            index = np.random.randint(0, len(self.state_input_list)-1)
             self.state_input = self.state_input_list[index]
             self.state_target = self.state_target_list[index]
 
             # Finite difference over all parameters
-            choi_model = generate_choi(self.X_model)
-            state_model = apply_map(self.state_input, choi_model)
-            self.fid_zero = state_norm(state_model, self.state_target)
-            fidd = state_fidelity(state_model, self.state_target)
+            self.X_plus = self.X_model + self.h
+            self.X_minus = self.X_model - self.h
+            self.X_iplus = self.X_model + 1j*self.h
+            self.X_iminus = self.X_model - 1j*self.h
 
             grad_matrix = np.zeros_like(self.X_model)
-            for idx in range(self.d**2*self.rank):
+            for idx in tqdm(range(self.d**2*self.rank)):
                 i = idx//self.rank
                 j = idx%self.rank
                 grad_matrix[i, j] = self.calculate_gradient(i, j)
 
             grad_matrix /= self.h
-
             if use_adam:
                 grad_matrix = self.adam(grad_matrix)
+            grad_matrix = tf.convert_to_tensor(grad_matrix)
 
+            self.X_model = self.X_model + self.lr*grad_matrix
 
-            self.X_model += self.lr*grad_matrix
+            choi_model = generate_choi(self.X_model)
+            state_model = apply_map(self.state_input, choi_model)
+            fid = state_fidelity(state_model, self.state_target)
 
-            self.fid_list.append(self.fid_zero)
-            print(f"{step}: {self.fid_zero:.3f}, {fidd:.3f}")
+            self.fid_list.append(fid)
+            print(f"{step}: {fid:.3f}")
 
-#    @profile
+    #@profile
     def calculate_gradient(self, i, j):
 
         h = self.h
         state_input = self.state_input
         state_target = self.state_target
-        X_model = self.X_model
+
+        mask = np.zeros_like(self.X_model, dtype="bool")
+        mask[i, j] = True
+        mask = tf.convert_to_tensor(mask)
 
         #Finite difference, real value
-        X_model[i, j] += h
-        choi_plus = generate_choi(X_model)
+        X = tf.where(mask, self.X_plus, self.X_model)
+        choi_plus = generate_choi(X)
         state_plus = apply_map(state_input, choi_plus)
-        fid_plus = state_norm(state_plus, state_target)
-        X_model[i, j] -= h
+        fid_plus = state_fidelity(state_plus, state_target)
 
-        grad = (fid_plus-self.fid_zero)
+        X = tf.where(mask, self.X_minus, self.X_model)
+        choi_minus = generate_choi(X)
+        state_minus = apply_map(state_input, choi_minus)
+        fid_minus = state_fidelity(state_minus, state_target)
+
+        grad = (fid_plus-fid_minus)
 
         #Finite difference, imaginary value
-        X_model[i, j] += 1j*h
-        choi_plus = generate_choi(X_model)
+        X = tf.where(mask, self.X_iplus, self.X_model)
+        choi_plus = generate_choi(X)
         state_plus = apply_map(state_input, choi_plus)
-        fid_plus = state_norm(state_plus, state_target)
-        X_model[i, j] -= 1j*h
+        fid_plus = state_fidelity(state_plus, state_target)
 
-        grad += 1j*(fid_plus-self.fid_zero)
+        X = tf.where(mask, self.X_iminus, self.X_model)
+        choi_minus = generate_choi(X)
+        state_minus = apply_map(state_input, choi_minus)
+        fid_minus = state_fidelity(state_minus, state_target)
 
+        grad += 1j*(fid_plus-fid_minus)
         return grad
