@@ -3,6 +3,7 @@ import qiskit as qk
 import matplotlib.pyplot as plt
 import multiprocessing as mp
 import torch
+import torch.optim as optim
 
 from qiskit.quantum_info import DensityMatrix
 from qiskit.quantum_info import Operator
@@ -139,43 +140,117 @@ def generate_choi(X):
 
     return choi
 
-def generate_kraus(X, d, rank):
-    #U, _, _ = torch.svd(X)
-    Q, R = torch.linalg.qr(X)
-    #U = Q@torch.diag(torch.sgn(torch.diag(R)))
-    kraus_list = [Q[i*d:(i+1)*d, :d] for i in range(rank)]
 
-    return kraus_list, U, Q, R
+def generate_unitary(ginibre):
+    Q, R = torch.linalg.qr(ginibre)
+    U = Q@torch.diag(torch.sgn(torch.diag(R)))
 
+    return U
+
+
+class ChoiMap():
+
+    def __init__(self, d, rank):
+        self.d = d
+        self.rank = rank
+
+        self.ginibre = generate_ginibre(d**2, rank)
+        self.parameter_list = [self.ginibre]
+
+        self.choi = None
+        self.generate_map()
+        self.k = np.array([-10], dtype = "float64")
+
+    def apply_map(self, state):
+        d = self.d
+
+        #reshuffle
+        choi = self.choi.reshape(d,d,d,d).swapaxes(1,2).reshape(d**2, d**2)
+
+        #flatten
+        state = state.reshape(-1, 1)
+
+        state = (choi@state).reshape(d, d)
+        return state
+
+    def generate_map(self):
+        I = np.eye(self.d)
+        X = self.ginibre
+        XX = X@X.conj().T
+        #partial trace
+        Y = partial_trace(XX)
+        Y = sqrtm(Y)
+        Y = np.linalg.inv(Y)
+        Ykron = np.kron(I, Y)
+
+        #choi
+        self.choi = Ykron@XX@Ykron
+
+    def update_parameters(self, weight_gradient_list):
+        for parameter, weight_gradient in zip(self.parameter_list, weight_gradient_list):
+            parameter += weight_gradient
+
+        self.generate_map()
+
+
+class KrausMap():
+
+    def __init__(self, U, c, d, rank, requires_grad=False):
+        self.U = U
+        self.d = d
+        self.rank = rank
+
+        _, self.A, self.B = generate_ginibre(rank*d, d, requires_grad=requires_grad)
+        k = -np.log(1/c - 1)
+        self.k = torch.tensor(k)
+        if requires_grad:
+            self.k = self.k.requires_grad_()
+
+        self.parameter_list = [self.A, self.B, self.k]
+
+        self.kraus_list = None
+        self.generate_map()
+
+    def apply_map(self, state):
+        c = 1/(1 + torch.exp(-self.k))
+        state = [c*self.U@state@self.U.T.conj()] + [(1 - c)*K@state@K.T.conj() for K in self.kraus_list]
+        state = torch.stack(state, dim=0).sum(dim=0)
+        return state
+
+    def generate_map(self):
+        d = self.d
+        X = self.A + 1j*self.B
+        U = generate_unitary(X)
+        self.kraus_list = [U[i*d:(i+1)*d, :d] for i in range(self.rank)]
 
 
 class ModelQuantumMap:
-    def __init__(self, n, rank, state_input_list, state_target_list, lr, h):
-        self.n = n
-        self.rank = rank
+
+    def __init__(self, model, state_input_list, state_target_list, lr):
+        self.model = model
         self.state_input_list = state_input_list
         self.state_target_list = state_target_list
-        self.lr = lr
-        self.h = h
 
-        self.d = 2**n
-        self.X_model = generate_ginibre(self.d**2, self.rank)
+        self.d = model.d
+        self.rank = model.rank
 
-        self.adam = Adam(dims = (self.d**2, self.rank))
+        self.optim = optim.Adam(model.parameter_list, lr=lr)
         self.fid_list = []
 
-    def train(self, num_iter, use_adam=False):
-
-        num_workers = min(self.rank, mp.cpu_count()//2)
+#    @profile
+    def train(self, num_iter):
 
         for step in tqdm(range(num_iter)):
-            index = np.random.randint(0, len(self.state_input_list)-1)
+            index = np.random.randint(len(self.state_input_list))
             self.state_input = self.state_input_list[index]
             self.state_target = self.state_target_list[index]
 
-            choi_model = generate_choi(self.X_model)
-            state_model = apply_map(self.state_input, choi_model)
-            fid = state_fidelity(state_model, self.state_target)
+            self.optim.zero_grad()
+            self.model.generate_map()
+            state_model = self.model.apply_map(self.state_input)
+            loss = -state_fidelity(self.state_target, state_model)
+            loss = torch.norm(self.state_target - state_model)
+            loss.backward()
+            self.optim.step()
 
-            self.fid_list.append(fid)
-            print(f"{step}: {fid:.3f}")
+            print(f"{step}: loss: {loss.detach().numpy():.3f}")
