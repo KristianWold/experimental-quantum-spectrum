@@ -47,7 +47,7 @@ def state_norm(A, B):
 
 
 #@profile
-def prepare_input(config, return_unitary = False):
+def prepare_input(config, return_mode = "density"):
     """1 = |0>, 2 = |1>, 3 = |+>, 4 = |->, 5 = |+i>, 6 = |-i>"""
     n = len(config)
     circuit = qk.QuantumCircuit(n)
@@ -69,10 +69,12 @@ def prepare_input(config, return_unitary = False):
             circuit.h(i)
             circuit.s(i)
 
-    if not return_unitary:
+    if return_mode == "density":
         state = DensityMatrix(circuit).data
-    else:
+    if return_mode == "unitary":
         state = Operator(circuit).data
+    if return_mode == "circuit":
+        state = circuit
 
     return state
 
