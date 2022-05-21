@@ -97,22 +97,21 @@ def likelihood(state, data):
 
 
 #@profile
-def generate_ginibre(dim1, dim2, real = False):
-    ginibre = np.random.normal(0, 1, (dim1, dim2))
-    if not real:
-         ginibre = ginibre + 1j*np.random.normal(0, 1, (dim1, dim2))
-    return ginibre
-
+def generate_ginibre(dim1, dim2):
+    A = np.random.normal(0, 1, (dim1, dim2))
+    B = np.random.normal(0, 1, (dim1, dim2))
+    X = A + 1j*B
+    return X, A, B
 
 def generate_state(dim1, dim2):
-    X = generate_ginibre(dim1, dim2)
+    X, _, _ = generate_ginibre(dim1, dim2)
 
     state = X@X.conj().T/np.trace(X@X.conj().T)
     return state
 
 
-def generate_unitary(ginibre):
-    Q, R = np.linalg.qr(ginibre)
+def generate_unitary(X):
+    Q, R = np.linalg.qr(X)
     R = np.diag(R)
     sign = R/np.abs(R)
     U = Q@np.diag(sign)
@@ -144,7 +143,7 @@ class Adam():
 
         for grad, m_, v_ in zip(weight_gradient_list, self.m, self.v):
             m_[:] = self.beta1 * m_ + (1 - self.beta1) * grad
-            v_[:] = self.beta2 * v_ + (1 - self.beta2) * grad*grad.conj()
+            v_[:] = self.beta2 * v_ + (1 - self.beta2) * grad*grad
 
             m_hat = m_ / (1 - self.beta1**self.t)
             v_hat = v_ / (1 - self.beta2**self.t)
@@ -160,12 +159,25 @@ class ChoiMap():
         self.d = d
         self.rank = rank
 
-        self.ginibre = generate_ginibre(d**2, rank)
-        self.parameter_list = [self.ginibre]
+        _, self.A, self.B = generate_ginibre(d**2, rank)
+        self.parameter_list = [self.A, self.B]
 
         self.choi = None
         self.generate_map()
-        self.k = np.array([-10], dtype = "float64")
+        self.k = np.array([[-10]], dtype = "float64")
+
+    def generate_map(self):
+        I = np.eye(self.d)
+        X = self.A + 1j*self.B
+        XX = X@X.conj().T
+        #partial trace
+        Y = partial_trace(XX)
+        Y = sqrtm(Y)
+        Y = np.linalg.inv(Y)
+        Ykron = np.kron(I, Y)
+
+        #choi
+        self.choi = Ykron@XX@Ykron
 
     def apply_map(self, state):
         d = self.d
@@ -178,19 +190,6 @@ class ChoiMap():
 
         state = (choi@state).reshape(d, d)
         return state
-
-    def generate_map(self):
-        I = np.eye(self.d)
-        X = self.ginibre
-        XX = X@X.conj().T
-        #partial trace
-        Y = partial_trace(XX)
-        Y = sqrtm(Y)
-        Y = np.linalg.inv(Y)
-        Ykron = np.kron(I, Y)
-
-        #choi
-        self.choi = Ykron@XX@Ykron
 
     def update_parameters(self, weight_gradient_list):
         for parameter, weight_gradient in zip(self.parameter_list, weight_gradient_list):
@@ -206,23 +205,24 @@ class KrausMap():
         self.d = d
         self.rank = rank
 
-        self.ginibre = generate_ginibre(rank*d, d)
+        _, self.A, self.B = generate_ginibre(rank*d, d)
         k = -np.log(1/c - 1)
-        self.k = np.array([k], dtype = "float64")
-        self.parameter_list = [self.ginibre, self.k]
+        self.k = np.array([[k]], dtype = "float64")
+        self.parameter_list = [self.A, self.B, self.k]
 
         self.kraus_list = None
         self.generate_map()
 
-    def apply_map(self, state):
-        c = 1/(1 + np.exp(-self.k[0]))
-        state = c*self.U@state@self.U.T.conj() + (1 - c)*sum([K@state@K.T.conj() for K in self.kraus_list])
-        return state
-
     def generate_map(self):
         d = self.d
-        U = generate_unitary(self.ginibre)
+        X = self.A + 1j*self.B
+        U = generate_unitary(X)
         self.kraus_list = [U[i*d:(i+1)*d, :d] for i in range(self.rank)]
+
+    def apply_map(self, state):
+        c = 1/(1 + np.exp(-self.k[0,0]))
+        state = c*self.U@state@self.U.T.conj() + (1 - c)*sum([K@state@K.T.conj() for K in self.kraus_list])
+        return state
 
     def update_parameters(self, weight_gradient_list):
         for parameter, weight_gradient in zip(self.parameter_list, weight_gradient_list):
@@ -257,60 +257,36 @@ class ModelQuantumMap:
             state_model = self.model.apply_map(self.state_input)
             self.fid_zero = state_fidelity(state_model, self.state_target)
 
-            grad_matrix = np.zeros_like(self.model.ginibre)
-            for idx in range(self.d**2*self.rank):
-                mod_val = self.model.ginibre.shape[1]
-                i = idx//mod_val
-                j = idx%mod_val
-                grad_matrix[i, j] = self.calculate_gradient(i, j)
-
-            grad_matrix /= self.h
-
-            grad_list = [grad_matrix]
-
-            if len(self.model.parameter_list) == 2:
-                self.model.parameter_list[1][0] += self.h
-                state_plus = self.model.apply_map(self.state_input)
-                fid_plus = state_fidelity(state_plus, self.state_target)
-                self.model.parameter_list[1][0] -= self.h
-
-                grad = (fid_plus - self.fid_zero)/self.h
-                grad = np.array([grad])
-
-                grad_list.append(grad)
+            grad_list = []
+            for parameter in self.model.parameter_list:
+                grad_matrix = self.calculate_gradient(parameter)
+                grad_list.append(grad_matrix)
 
             if use_adam:
                 grad_list = self.adam(grad_list, self.lr)
 
             self.model.update_parameters(grad_list)
-            c = 1/(1 + np.exp(-self.model.k[0]))
+            c = 1/(1 + np.exp(-self.model.k[0,0]))
 
             self.fid_list.append(self.fid_zero)
             print(f"{step}: fid: {self.fid_zero:.3f}, c: {c:.3f}")
 
 #    @profile
-    def calculate_gradient(self, i, j):
+    def calculate_gradient(self, parameter):
 
         h = self.h
         state_input = self.state_input
         state_target = self.state_target
 
-        #Finite difference, real value
-        self.model.ginibre[i, j] += h
-        self.model.generate_map()
-        state_plus = self.model.apply_map(state_input)
-        fid_plus = state_fidelity(state_plus, state_target)
-        self.model.ginibre[i, j] -= h
+        grad_matrix = np.zeros_like(parameter)
+        for i in range(parameter.shape[0]):
+            for j in range(parameter.shape[1]):
+                parameter[i, j] += h
+                self.model.generate_map()
+                state_plus = self.model.apply_map(state_input)
+                fid_plus = state_fidelity(state_plus, state_target)
+                parameter[i, j] -= h
 
-        grad = (fid_plus-self.fid_zero)
+                grad_matrix[i, j] = (fid_plus-self.fid_zero)/h
 
-        #Finite difference, imaginary value
-        self.model.ginibre[i, j] += 1j*h
-        self.model.generate_map()
-        state_plus = self.model.apply_map(state_input)
-        fid_plus = state_fidelity(state_plus, state_target)
-        self.model.ginibre[i, j] -= 1j*h
-
-        grad += 1j*(fid_plus-self.fid_zero)
-
-        return grad
+        return grad_matrix
