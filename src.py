@@ -165,6 +165,7 @@ class ChoiMap():
 
         self.choi = None
         self.generate_map()
+        self.k = np.array([-10], dtype = "float64")
 
     def apply_map(self, state):
         d = self.d
