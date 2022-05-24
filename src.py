@@ -105,8 +105,8 @@ def generate_ginibre(dim1, dim2):
     X = A + 1j*B
     return X, A, B
 
-def generate_state(dim1, dim2):
-    X, _, _ = generate_ginibre(dim1, dim2)
+def generate_state(d, rank):
+    X, _, _ = generate_ginibre(d, rank)
 
     state = X@X.conj().T/np.trace(X@X.conj().T)
     return state
