@@ -45,6 +45,19 @@ def state_norm(A, B):
     norm = 1 - np.linalg.norm(A - B)
     return np.abs(norm)
 
+def kraus_to_choi(kraus_map):
+    d = kraus_map.kraus_list[0].shape[0]
+    choi = np.zeros((d**2, d**2), dtype="complex128")
+    for i in range(d):
+        for j in range(d):
+            M = np.zeros((d,d), dtype="complex128")
+            M[i,j] = 1
+            M_prime = kraus_map.apply_map(M)
+            choi += np.kron(M_prime, M)
+    choi /= d
+
+    return choi
+
 
 #@profile
 def prepare_input(config, return_mode = "density"):
@@ -104,6 +117,7 @@ def generate_ginibre(dim1, dim2):
     B = np.random.normal(0, 1, (dim1, dim2))
     X = A + 1j*B
     return X, A, B
+
 
 def generate_state(d, rank):
     X, _, _ = generate_ginibre(d, rank)
@@ -219,11 +233,14 @@ class KrausMap():
         d = self.d
         X = self.A + 1j*self.B
         U = generate_unitary(X)
-        self.kraus_list = [U[i*d:(i+1)*d, :d] for i in range(self.rank)]
+
+        c = 1/(1 + np.exp(-self.k[0,0]))
+        self.kraus_list = [np.sqrt(1-c)*U[i*d:(i+1)*d, :d] for i in range(self.rank)]
+        self.kraus_list.append(np.sqrt(c)*self.U)
 
     def apply_map(self, state):
-        c = 1/(1 + np.exp(-self.k[0,0]))
-        state = c*self.U@state@self.U.T.conj() + (1 - c)*sum([K@state@K.T.conj() for K in self.kraus_list])
+
+        state = sum([K@state@K.T.conj() for K in self.kraus_list])
         return state
 
     def update_parameters(self, weight_gradient_list):
@@ -249,7 +266,7 @@ class ModelQuantumMap:
         self.fid_list = []
 
 #    @profile
-    def train(self, num_iter, use_adam=False):
+    def train(self, num_iter, use_adam=False, verbose=True):
 
         for step in tqdm(range(num_iter)):
             index = np.random.randint(len(self.state_input_list))
@@ -271,7 +288,8 @@ class ModelQuantumMap:
             c = 1/(1 + np.exp(-self.model.k[0,0]))
 
             self.fid_list.append(self.fid_zero)
-            print(f"{step}: fid: {self.fid_zero:.3f}, c: {c:.3f}")
+            if verbose:
+                print(f"{step}: fid: {self.fid_zero:.3f}, c: {c:.3f}")
 
 #    @profile
     def calculate_gradient(self, parameter):
