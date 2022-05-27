@@ -40,10 +40,12 @@ def state_fidelity(A, B):
     fidelity = np.trace(sqrtm(C))
     return np.abs(fidelity)
 
+
 def state_norm(A, B):
 
     norm = 1 - np.linalg.norm(A - B)
     return np.abs(norm)
+
 
 def kraus_to_choi(kraus_map):
     d = kraus_map.kraus_list[0].shape[0]
@@ -57,6 +59,12 @@ def kraus_to_choi(kraus_map):
     choi /= d
 
     return choi
+
+
+def expectation_value(state, observable, map):
+    state = map.apply_map(state)
+    ev = np.trace(observable@state)
+    return ev
 
 
 #@profile
@@ -92,23 +100,27 @@ def prepare_input(config, return_mode = "density"):
     return state
 
 
-def sample_bitstring(state, basis, return_index):
-    N = state.shape[0]
-    n = np.log(N)
-    state = basis@state@basis.T.conj()
-    probs = np.abs(np.diag(state))
-    index = np.random.choice(range(N), p = probs)
+def kron(*args):
+    length = len(args)
+    A = args[0]
+    for i in range(1, length):
+        A = np.kron(A, args[i])
 
-    if return_index:
-        output = index
-    else:
-        output = numberToBase(index, 2, n)
-
-    return output
+    return A
 
 
-def likelihood(state, data):
-    pass
+def pauli_observable(config):
+    I = np.eye(2)
+    X = np.array([[0, 1], [1, 0]])
+    Y = np.array([[0, -1j], [1j, 0]])
+    Z = np.array([[1, 0], [0, -1]])
+
+    basis = [I, X, Y, Z]
+
+    string = [basis[i] for i in config]
+    observable = kron(*string)
+
+    return observable
 
 
 #@profile
@@ -169,6 +181,21 @@ class Adam():
         return weight_gradient_modified
 
 
+def state_denstiy_loss(model, input, target):
+    state = input
+    output = model.apply_map(input)
+    cost = -state_fidelity(output, target)
+    return cost
+
+
+def expectation_value_loss(model, input, target):
+    state, observable = input
+    state = model.apply_map(state)
+    output = expectation_value(state, observable, model)
+    cost = np.abs((output - target))**2
+    return cost
+
+
 class ChoiMap():
 
     def __init__(self, d, rank):
@@ -209,7 +236,7 @@ class ChoiMap():
 
     def update_parameters(self, weight_gradient_list):
         for parameter, weight_gradient in zip(self.parameter_list, weight_gradient_list):
-            parameter += weight_gradient
+            parameter -= weight_gradient
 
         self.generate_map()
 
@@ -245,17 +272,18 @@ class KrausMap():
 
     def update_parameters(self, weight_gradient_list):
         for parameter, weight_gradient in zip(self.parameter_list, weight_gradient_list):
-            parameter += weight_gradient
+            parameter -= weight_gradient
 
         self.generate_map()
 
 
 class ModelQuantumMap:
 
-    def __init__(self, model, state_input_list, state_target_list, lr, h):
+    def __init__(self, model, cost, input_list, target_list, lr, h):
         self.model = model
-        self.state_input_list = state_input_list
-        self.state_target_list = state_target_list
+        self.cost = cost
+        self.input_list = input_list
+        self.target_list = target_list
         self.lr = lr
         self.h = h
 
@@ -263,18 +291,17 @@ class ModelQuantumMap:
         self.rank = model.rank
 
         self.adam = Adam()
-        self.fid_list = []
+        self.cost_list = []
 
 #    @profile
     def train(self, num_iter, use_adam=False, verbose=True):
 
         for step in tqdm(range(num_iter)):
-            index = np.random.randint(len(self.state_input_list))
-            self.state_input = self.state_input_list[index]
-            self.state_target = self.state_target_list[index]
+            index = np.random.randint(len(self.input_list))
+            self.input = self.input_list[index]
+            self.target = self.target_list[index]
 
-            state_model = self.model.apply_map(self.state_input)
-            self.fid_zero = state_fidelity(state_model, self.state_target)
+            self.cost_zero = self.cost(self.model, self.input, self.target)
 
             grad_list = []
             for parameter in self.model.parameter_list:
@@ -287,26 +314,25 @@ class ModelQuantumMap:
             self.model.update_parameters(grad_list)
             c = 1/(1 + np.exp(-self.model.k[0,0]))
 
-            self.fid_list.append(self.fid_zero)
+            self.cost_list.append(self.cost_zero)
             if verbose:
-                print(f"{step}: fid: {self.fid_zero:.3f}, c: {c:.3f}")
+                print(f"{step}: fid: {self.cost_zero:.3f}, c: {c:.3f}")
 
 #    @profile
     def calculate_gradient(self, parameter):
 
         h = self.h
-        state_input = self.state_input
-        state_target = self.state_target
+        input = self.input
+        target = self.target
 
         grad_matrix = np.zeros_like(parameter)
         for i in range(parameter.shape[0]):
             for j in range(parameter.shape[1]):
                 parameter[i, j] += h
                 self.model.generate_map()
-                state_plus = self.model.apply_map(state_input)
-                fid_plus = state_fidelity(state_plus, state_target)
+                cost_plus = self.cost(self.model, input, target)
                 parameter[i, j] -= h
 
-                grad_matrix[i, j] = (fid_plus-self.fid_zero)/h
+                grad_matrix[i, j] = (cost_plus-self.cost_zero)/h
 
         return grad_matrix
