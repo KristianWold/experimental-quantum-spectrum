@@ -38,23 +38,26 @@ def state_fidelity(A, B):
     return fidelity
 
 
-def apply_map(state, choi):
-    d = state.shape[0]
+def kron(*args):
+    length = len(args)
+    A = args[0]
+    for i in range(1, length):
+        A = torch.kron(A, args[i])
 
-    #reshuffle
-    choi = choi.reshape(d,d,d,d).swapaxes(1,2).reshape(d**2, d**2)
+    return A
 
-    #flatten
-    state = state.reshape(-1, 1)
+def pauli_observable(config):
+    I = torch.eye(2)
+    X = torch.tensor([[0, 1], [1, 0]])
+    Y = torch.tensor([[0, -1j], [1j, 0]])
+    Z = torch.tensor([[1, 0], [0, -1]])
 
-    state = (choi@state).reshape(d, d)
-    return state
+    basis = [I, X, Y, Z]
 
-def apply_kraus(state, kraus_list):
-    state = [K.T.conj()@state@K for K in kraus_list]
-    state = torch.stack(state, dim=0).sum(dim=0)
+    string = [basis[i] for i in config]
+    observable = kron(*string).type(torch.complex128)
 
-    return state
+    return observable
 
 
 def prepare_input(config, return_unitary = False):
@@ -126,26 +129,46 @@ def square_root(A):
     return B
 
 
-def generate_choi(X):
-    d = int(np.sqrt(X.shape[0]))  # dim of Hilbert space
-    I = torch.eye(d).type(torch.complex128)
-    XX = X@X.T.conj()
-
-    #partial trace
-    Y = square_root_inverse(partial_trace(XX, discard_first=True))
-    Ykron = torch.kron(I, Y).T
-
-    #choi
-    choi = Ykron@XX@Ykron
-
-    return choi
-
-
 def generate_unitary(ginibre):
     Q, R = torch.linalg.qr(ginibre)
     U = Q@torch.diag(torch.sgn(torch.diag(R)))
 
     return U
+
+
+def kraus_to_choi(kraus_map):
+    d = kraus_map.kraus_list[0].shape[0]
+    choi = torch.zeros((d**2, d**2), dtype=torch.complex128)
+    for i in range(d):
+        for j in range(d):
+            M = torch.zeros((d,d), dtype=torch.complex128)
+            M[i,j] = 1
+            M_prime = kraus_map.apply_map(M)
+            choi += torch.kron(M_prime, M)
+    choi /= d
+
+    return choi
+
+
+def expectation_value(state, observable, map):
+    state = map.apply_map(state)
+    ev = torch.trace(observable@state)
+    return ev
+
+
+def state_density_loss(model, input, target):
+    state = input
+    output = model.apply_map(input)
+    loss = -state_fidelity(output, target)
+    return loss
+
+
+def expectation_value_loss(model, input, target):
+    state, observable = input
+    state = model.apply_map(state)
+    output = expectation_value(state, observable, model)
+    loss = (output - target)**2
+    return loss
 
 
 class ChoiMap():
@@ -212,8 +235,8 @@ class KrausMap():
         self.generate_map()
 
     def apply_map(self, state):
-        c = 1/(1 + torch.exp(-self.k))
-        state = [c*self.U@state@self.U.T.conj()] + [(1 - c)*K@state@K.T.conj() for K in self.kraus_list]
+
+        state = [K@state@K.T.conj() for K in self.kraus_list]
         state = torch.stack(state, dim=0).sum(dim=0)
         return state
 
@@ -221,15 +244,19 @@ class KrausMap():
         d = self.d
         X = self.A + 1j*self.B
         U = generate_unitary(X)
-        self.kraus_list = [U[i*d:(i+1)*d, :d] for i in range(self.rank)]
+        c = 1/(1 + torch.exp(-self.k))
+
+        self.kraus_list = [(1-c)*U[i*d:(i+1)*d, :d] for i in range(self.rank)]
+        self.kraus_list.append(c*self.U)
 
 
 class ModelQuantumMap:
 
-    def __init__(self, model, state_input_list, state_target_list, lr):
+    def __init__(self, model, loss, input_list, target_list, lr):
         self.model = model
-        self.state_input_list = state_input_list
-        self.state_target_list = state_target_list
+        self.loss = loss
+        self.input_list = input_list
+        self.target_list = target_list
 
         self.d = model.d
         self.rank = model.rank
@@ -241,16 +268,15 @@ class ModelQuantumMap:
     def train(self, num_iter):
 
         for step in tqdm(range(num_iter)):
-            index = np.random.randint(len(self.state_input_list))
-            self.state_input = self.state_input_list[index]
-            self.state_target = self.state_target_list[index]
+            index = np.random.randint(len(self.input_list))
+            input = self.input_list[index]
+            target = self.target_list[index]
 
             self.optim.zero_grad()
             self.model.generate_map()
-            state_model = self.model.apply_map(self.state_input)
-            loss = -state_fidelity(self.state_target, state_model)
-            loss = torch.norm(self.state_target - state_model)
+            loss = self.loss(self.model, input, target)
             loss.backward()
             self.optim.step()
+            choi_model = kraus_to_choi(self.model)
 
             print(f"{step}: loss: {loss.detach().numpy():.3f}")

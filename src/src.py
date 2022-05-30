@@ -47,22 +47,25 @@ def state_norm(A, B):
     return np.abs(norm)
 
 
-def kraus_to_choi(kraus_map):
-    d = kraus_map.kraus_list[0].shape[0]
+def maps_to_choi(map_list):
+    d = map_list[0].d
     choi = np.zeros((d**2, d**2), dtype="complex128")
     for i in range(d):
         for j in range(d):
             M = np.zeros((d,d), dtype="complex128")
             M[i,j] = 1
-            M_prime = kraus_map.apply_map(M)
+            M_prime = np.copy(M)
+            for map in map_list:
+                M_prime = kraus_map.apply_map(M_prime)
+
             choi += np.kron(M_prime, M)
     choi /= d
 
     return choi
 
 
-def expectation_value(state, observable, map):
-    state = map.apply_map(state)
+def expectation_value(state, observable, q_map):
+    state = q_map.apply_map(state)
     ev = np.trace(observable@state)
     return ev
 
@@ -147,6 +150,37 @@ def generate_unitary(X):
     return U
 
 
+def state_density_loss(q_map, input, target):
+    state = input
+    output = q_map.apply_map(input)
+    cost = -state_fidelity(output, target)
+    return cost
+
+
+def expectation_value_loss(q_map, input, target):
+    state, observable = input
+    state = q_map.apply_map(state)
+    output = expectation_value(state, observable, q_map)
+    cost = np.abs(output - target)**2
+    return cost
+
+
+def reshuffle_choi(choi):
+    d = int(np.sqrt(choi.shape[0]))
+    choi = choi.reshape(d,d,d,d).swapaxes(1,2).reshape(d**2, d**2)
+    return choi
+
+
+def choi_spectrum(choi, pairs = False):
+    choi = reshuffle_choi(choi)
+    eig, _ = np.linalg.eig(choi)
+
+    x = [np.real(x) for x in eig]
+    y = [np.imag(y) for y in eig]
+
+    return [x, y]
+
+
 class Adam():
 
     def __init__(self, lr=0.01, beta1=0.9, beta2=0.999, eps=1e-8):
@@ -181,21 +215,6 @@ class Adam():
         return weight_gradient_modified
 
 
-def state_denstiy_loss(model, input, target):
-    state = input
-    output = model.apply_map(input)
-    cost = -state_fidelity(output, target)
-    return cost
-
-
-def expectation_value_loss(model, input, target):
-    state, observable = input
-    state = model.apply_map(state)
-    output = expectation_value(state, observable, model)
-    cost = np.abs((output - target))**2
-    return cost
-
-
 class ChoiMap():
 
     def __init__(self, d, rank):
@@ -223,15 +242,13 @@ class ChoiMap():
         self.choi = Ykron@XX@Ykron
 
     def apply_map(self, state):
-        d = self.d
-
         #reshuffle
-        choi = self.choi.reshape(d,d,d,d).swapaxes(1,2).reshape(d**2, d**2)
+        choi = reshuffle_choi(self.choi)
 
         #flatten
         state = state.reshape(-1, 1)
 
-        state = (choi@state).reshape(d, d)
+        state = (choi@state).reshape(self.d, self.d)
         return state
 
     def update_parameters(self, weight_gradient_list):
@@ -279,44 +296,54 @@ class KrausMap():
 
 class ModelQuantumMap:
 
-    def __init__(self, model, cost, input_list, target_list, lr, h):
-        self.model = model
+    def __init__(self, q_map, cost, input_list, target_list, lr, h):
+        self.q_map = q_map
         self.cost = cost
         self.input_list = input_list
         self.target_list = target_list
         self.lr = lr
         self.h = h
 
-        self.d = model.d
-        self.rank = model.rank
+        self.d = q_map.d
+        self.rank = q_map.rank
 
         self.adam = Adam()
-        self.cost_list = []
+        self.fid_list = []
 
 #    @profile
-    def train(self, num_iter, use_adam=False, verbose=True):
-
+    def train(self, num_iter, use_adam=False, verbose=True, N = 10, choi_target=None):
         for step in tqdm(range(num_iter)):
-            index = np.random.randint(len(self.input_list))
-            self.input = self.input_list[index]
-            self.target = self.target_list[index]
 
-            self.cost_zero = self.cost(self.model, self.input, self.target)
+            grad_list = [np.zeros_like(parameter) for parameter in self.q_map.parameter_list]
+            for batch in range(N):
+                index = np.random.randint(len(self.input_list))
+                self.input = self.input_list[index]
+                self.target = self.target_list[index]
 
-            grad_list = []
-            for parameter in self.model.parameter_list:
-                grad_matrix = self.calculate_gradient(parameter)
-                grad_list.append(grad_matrix)
+                self.cost_zero = self.cost(self.q_map, self.input, self.target)
+
+                for parameter, grad in zip(self.q_map.parameter_list, grad_list):
+                    grad_matrix = self.calculate_gradient(parameter)
+                    grad += grad_matrix
+
+            for grad in grad_list:
+                grad /= N
 
             if use_adam:
                 grad_list = self.adam(grad_list, self.lr)
 
-            self.model.update_parameters(grad_list)
-            c = 1/(1 + np.exp(-self.model.k[0,0]))
+            self.q_map.update_parameters(grad_list)
+            c = 1/(1 + np.exp(-self.q_map.k[0,0]))
 
-            self.cost_list.append(self.cost_zero)
+            if choi_target is not None:
+                choi_model = kraus_to_choi([self.q_map])
+                fid = state_fidelity(choi_model, choi_target)
+            else:
+                fid = self.cost_zero
+
+            self.fid_list.append(fid)
             if verbose:
-                print(f"{step}: fid: {self.cost_zero:.3f}, c: {c:.3f}")
+                print(f"{step}: fid: {fid:.3f}, c: {c:.3f}")
 
 #    @profile
     def calculate_gradient(self, parameter):
@@ -329,8 +356,8 @@ class ModelQuantumMap:
         for i in range(parameter.shape[0]):
             for j in range(parameter.shape[1]):
                 parameter[i, j] += h
-                self.model.generate_map()
-                cost_plus = self.cost(self.model, input, target)
+                self.q_map.generate_map()
+                cost_plus = self.cost(self.q_map, input, target)
                 parameter[i, j] -= h
 
                 grad_matrix[i, j] = (cost_plus-self.cost_zero)/h
