@@ -366,8 +366,12 @@ class ModelQuantumMap:
                 parameter[i, j] += h
                 self.q_map.generate_map()
                 cost_plus = self.cost(self.q_map, input, target)
-                parameter[i, j] -= h
 
-                grad_matrix[i, j] = (cost_plus-self.cost_zero)/h
+                parameter[i, j] -= 2*h
+                self.q_map.generate_map()
+                cost_minus = self.cost(self.q_map, input, target)
+
+                parameter[i, j] += h
+                grad_matrix[i, j] = (cost_plus-cost_minus)/(2*h)
 
         return grad_matrix
