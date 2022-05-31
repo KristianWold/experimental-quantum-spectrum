@@ -6,7 +6,6 @@ import random
 from qiskit.quantum_info import DensityMatrix
 from qiskit.quantum_info import Operator
 from scipy.linalg import sqrtm
-from scipy.linalg import cholesky
 from tqdm.notebook import tqdm
 
 def numberToBase(n, b, num_digits):
@@ -38,7 +37,16 @@ def state_fidelity(A, B):
     C = sqrtB@A@sqrtB
 
     fidelity = np.trace(sqrtm(C))
-    return np.abs(fidelity)
+    return np.abs(fidelity)**2
+
+
+def channel_fidelity(map_A, map_B):
+    choi_A = maps_to_choi([map_A])
+    choi_B = maps_to_choi([map_B])
+    d_squared = choi_A.shape[0]
+    fidelity = state_fidelity(choi_A, choi_B)/d_squared
+
+    return fidelity
 
 
 def state_norm(A, B):
@@ -56,10 +64,9 @@ def maps_to_choi(map_list):
             M[i,j] = 1
             M_prime = np.copy(M)
             for map in map_list:
-                M_prime = kraus_map.apply_map(M_prime)
+                M_prime = map.apply_map(M_prime)
 
             choi += np.kron(M_prime, M)
-    choi /= d
 
     return choi
 
@@ -171,7 +178,7 @@ def reshuffle_choi(choi):
     return choi
 
 
-def choi_spectrum(choi, pairs = False):
+def choi_spectrum(choi):
     choi = reshuffle_choi(choi)
     eig, _ = np.linalg.eig(choi)
 
@@ -311,7 +318,8 @@ class ModelQuantumMap:
         self.fid_list = []
 
 #    @profile
-    def train(self, num_iter, use_adam=False, verbose=True, N = 10, choi_target=None):
+    def train(self, num_iter, use_adam=False, verbose=True, N = 1, choi_target=None):
+
         for step in tqdm(range(num_iter)):
 
             grad_list = [np.zeros_like(parameter) for parameter in self.q_map.parameter_list]
