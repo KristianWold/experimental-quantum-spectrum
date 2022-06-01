@@ -267,27 +267,40 @@ class ChoiMap():
 
 class KrausMap():
 
-    def __init__(self, U, c, d, rank):
+    def __init__(self,
+                 U=None,
+                 c=None,
+                 d=None,
+                 rank = None):
         self.U = U
         self.d = d
         self.rank = rank
 
         _, self.A, self.B = generate_ginibre(rank*d, d)
-        k = -np.log(1/c - 1)
-        self.k = np.array([[k]], dtype = "float64")
-        self.parameter_list = [self.A, self.B, self.k]
+        self.parameter_list = [self.A, self.B]
+
+        if self.U is not None:
+            k = -np.log(1/c - 1)
+            self.k = np.array([[k]], dtype = "float64")
+            self.parameter_list.append(self.k)
 
         self.kraus_list = None
         self.generate_map()
 
-    def generate_map(self):
+    def generate_map(self, U=None):
         d = self.d
         X = self.A + 1j*self.B
-        U = generate_unitary(X)
+        if U is None:
+            U = generate_unitary(X)
 
-        c = 1/(1 + np.exp(-self.k[0,0]))
-        self.kraus_list = [np.sqrt(1-c)*U[i*d:(i+1)*d, :d] for i in range(self.rank)]
-        self.kraus_list.append(np.sqrt(c)*self.U)
+        self.kraus_list = []
+        if self.U is not None:
+            c = 1/(1 + np.exp(-self.k[0,0]))
+            self.kraus_list.append(np.sqrt(c)*self.U)
+        else:
+            c = 0
+
+        self.kraus_list.extend([np.sqrt(1-c)*U[i*d:(i+1)*d, :d] for i in range(self.rank)])
 
     def apply_map(self, state):
 
@@ -328,7 +341,7 @@ class ModelQuantumMap:
                 self.input = self.input_list[index]
                 self.target = self.target_list[index]
 
-                self.cost_zero = self.cost(self.q_map, self.input, self.target)
+
 
                 for parameter, grad in zip(self.q_map.parameter_list, grad_list):
                     grad_matrix = self.calculate_gradient(parameter)
@@ -341,13 +354,16 @@ class ModelQuantumMap:
                 grad_list = self.adam(grad_list, self.lr)
 
             self.q_map.update_parameters(grad_list)
+
+            self.cost_average = sum([self.cost(self.q_map, input, target) for input, target in zip(self.input_list, self.target_list)])/len(self.input_list)
+
             c = 1/(1 + np.exp(-self.q_map.k[0,0]))
 
             if choi_target is not None:
                 choi_model = kraus_to_choi([self.q_map])
                 fid = state_fidelity(choi_model, choi_target)
             else:
-                fid = self.cost_zero
+                fid = self.cost_average
 
             self.fid_list.append(fid)
             if verbose:
