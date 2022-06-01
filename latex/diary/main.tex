@@ -16,6 +16,7 @@
 \usepackage{float}
 \usepackage{caption}
 \usepackage{subcaption}
+\usepackage[demo]{graphicx}
 %Path
 \graphicspath{{figures/}}
 
@@ -46,29 +47,60 @@
 
 \section{Interesting Quantum Maps}
 
-\usepackage{rotating}
-\usepackage{subfigure}
-....
-\begin{sidewaysfigure}
-\subfigure[Title A]{\includegraphics[width=7cm]{../figures/plot1a.png}}
-\subfigure[Title B]{\includegraphics[width=7cm]{figures/plot1b.png}}
-\subfigure[Title B]{\includegraphics[width=7cm]{figures/plot1c.png}}
-\caption{Title for both}
-\end{sidewaysfigure}
 
-\begin{sidewaysfigure}
-\subfigure[Title A]{\includegraphics[width=7cm]{figures/plot2a.png}}
-\subfigure[Title B]{\includegraphics[width=7cm]{figures/plot2b.png}}
-\subfigure[Title B]{\includegraphics[width=7cm]{figures/plot2c.png}}
-\caption{Title for both}
-\end{sidewaysfigure}
+\begin{figure}[htbp]
+\begin{subfigure}[t]{0.3\textwidth}
+    \includegraphics[width=\linewidth]{../figures/twoQubit_squareRootDepth}
+\caption{Two Qubits}
+\label{fig:figure14_1}
+\end{subfigure}\hfill
+\begin{subfigure}[t]{0.3\textwidth}
+  \includegraphics[width=\linewidth]{../figures/threeQubit_squareRootDepth}
+\caption{Three Qubits}
+\label{fig:figure14_2}
+\end{subfigure}\hfill
+\begin{subfigure}[t]{0.3\textwidth}
+    \includegraphics[width=\linewidth]{../figures/fourQubit_squareRootDepth}
+\caption{Four Qubits}
+\label{fig:figure14_3}
+\end{subfigure}
 
-\begin{sidewaysfigure}
-\subfigure[Title A]{\includegraphics[width=7cm]{figures/plot3a.png}}
-\subfigure[Title B]{\includegraphics[width=7cm]{figures/plot3b.png}}
-\subfigure[Title B]{\includegraphics[width=7cm]{figures/plot3c.png}}
-\caption{Title for both}
-\end{sidewaysfigure}
+\begin{subfigure}[t]{0.3\textwidth}
+    \includegraphics[width=\linewidth]{../figures/twoQubit_linearDepth}
+\caption{Two Qubits}
+\label{fig:figure14_4}
+\end{subfigure}\hfill
+\begin{subfigure}[t]{0.3\textwidth}
+    \includegraphics[width=\linewidth]{../figures/threeQubit_linearDepth}
+\caption{Three Qubits}
+\label{fig:figure14_5}
+\end{subfigure}\hfill
+\begin{subfigure}[t]{0.3\textwidth}
+    \includegraphics[width=\textwidth]{../figures/fourQubit_linearDepth}
+\caption{Four Qubits}
+\label{fig:figure14_6}
+\end{subfigure}
+
+\begin{subfigure}[t]{0.3\textwidth}
+    \includegraphics[width=\linewidth]{../figures/twoQubit_squareDepth}
+\caption{Two Qubits}
+\label{fig:figure14_7}
+\end{subfigure}\hfill
+\begin{subfigure}[t]{0.3\textwidth}
+    \includegraphics[width=\linewidth]{../figures/twoQubit_squareDepth}
+\caption{Three Qubits}
+\label{fig:figure14_8}
+\end{subfigure}\hfill
+\begin{subfigure}[t]{0.3\textwidth}
+    \includegraphics[width=\linewidth]{../figures/twoQubit_squareDepth}
+\caption{Four Qubits}
+\label{fig:figure14_9}
+\end{subfigure}
+
+\caption{3-point bending, elastic and plastic stress distribution, 
+    shaft under torsion load and linearly distributed load.}
+\label{figure14_99}
+\end{figure}
 
 
 
