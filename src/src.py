@@ -333,6 +333,8 @@ class ModelQuantumMap:
 #    @profile
     def train(self, num_iter, use_adam=False, verbose=True, N = 1, choi_target=None):
 
+        self.cost_average = sum([self.cost(self.q_map, input, target) for input, target in zip(self.input_list, self.target_list)])/len(self.input_list)
+
         for step in tqdm(range(num_iter)):
 
             grad_list = [np.zeros_like(parameter) for parameter in self.q_map.parameter_list]
@@ -340,8 +342,6 @@ class ModelQuantumMap:
                 index = np.random.randint(len(self.input_list))
                 self.input = self.input_list[index]
                 self.target = self.target_list[index]
-
-
 
                 for parameter, grad in zip(self.q_map.parameter_list, grad_list):
                     grad_matrix = self.calculate_gradient(parameter)
@@ -381,11 +381,11 @@ class ModelQuantumMap:
             for j in range(parameter.shape[1]):
                 parameter[i, j] += h
                 self.q_map.generate_map()
-                cost_plus = self.cost(self.q_map, input, target)
+                cost_plus = self.cost(self.q_map, input, target, grad=True)
 
                 parameter[i, j] -= 2*h
                 self.q_map.generate_map()
-                cost_minus = self.cost(self.q_map, input, target)
+                cost_minus = self.cost(self.q_map, input, target, grad=True)
 
                 parameter[i, j] += h
                 grad_matrix[i, j] = (cost_plus-cost_minus)/(2*h)
