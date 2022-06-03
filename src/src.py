@@ -157,18 +157,24 @@ def generate_unitary(X):
     return U
 
 
-def state_density_loss(q_map, input, target):
+def state_density_loss(q_map, input, target, grad=False):
     state = input
     output = q_map.apply_map(input)
     cost = -state_fidelity(output, target)
     return cost
 
 
-def expectation_value_loss(q_map, input, target):
+def expectation_value_loss(q_map, input, target, grad=False):
     state, observable = input
     state = q_map.apply_map(state)
     output = expectation_value(state, observable, q_map)
     cost = np.abs(output - target)**2
+    return cost
+
+
+def channel_fidelity_loss(q_map, input, target, grad=False):
+    q_map_target = input
+    cost = -channel_fidelity(q_map, q_map_target)
     return cost
 
 
@@ -263,6 +269,61 @@ class ChoiMap():
             parameter -= weight_gradient
 
         self.generate_map()
+
+
+class DoubleChoiMap():
+
+    def __init__(self, d, rank):
+        self.d = d
+        self.rank = rank
+
+        self.double_choi = [ChoiMap(d, rank), ChoiMap(d, rank)]
+        self.parameter_list = []
+        self.parameter_list.extend(self.double_choi[0].parameter_list)
+        self.parameter_list.extend(self.double_choi[1].parameter_list)
+
+
+        self.generate_map()
+        self.k = np.array([[-10]], dtype = "float64")
+
+    def generate_map(self):
+        self.double_choi[0].generate_map()
+        self.double_choi[1].generate_map()
+
+    def apply_map(self, state):
+        #reshuffle
+        state = self.double_choi[0].apply_map(state)
+        state = self.double_choi[1].apply_map(state)
+        return state
+
+    def update_parameters(self, weight_gradient_list):
+        self.double_choi[0].update_parameters(weight_gradient_list[:2])
+        self.double_choi[1].update_parameters(weight_gradient_list[2:])
+
+
+class SquareRootChoiMap():
+
+    def __init__(self, d, rank):
+        self.d = d
+        self.rank = rank
+
+        self.square_root_choi = ChoiMap(d, rank)
+        self.parameter_list = self.square_root_choi.parameter_list
+
+
+        self.generate_map()
+        self.k = np.array([[-10]], dtype = "float64")
+
+    def generate_map(self):
+        self.square_root_choi.generate_map()
+
+    def apply_map(self, state):
+        #reshuffle
+        state = self.square_root_choi.apply_map(self.square_root_choi.apply_map(state))
+        return state
+
+    def update_parameters(self, weight_gradient_list):
+        self.square_root_choi.update_parameters(weight_gradient_list)
 
 
 class KrausMap():
