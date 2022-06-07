@@ -188,10 +188,10 @@ def choi_spectrum(choi):
     choi = reshuffle_choi(choi)
     eig, _ = np.linalg.eig(choi)
 
-    x = [np.real(x) for x in eig]
-    y = [np.imag(y) for y in eig]
+    x = np.real(eig)
+    y = np.imag(eig)
 
-    return [x, y]
+    return np.array([x, y])
 
 
 class Adam():
@@ -332,7 +332,8 @@ class KrausMap():
                  U=None,
                  c=None,
                  d=None,
-                 rank = None):
+                 rank = None,
+                 generate_map = True):
         self.U = U
         self.d = d
         self.rank = rank
@@ -346,7 +347,8 @@ class KrausMap():
             self.parameter_list.append(self.k)
 
         self.kraus_list = None
-        self.generate_map()
+        if generate_map:
+            self.generate_map()
 
     def generate_map(self, U=None):
         d = self.d
