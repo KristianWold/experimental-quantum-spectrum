@@ -45,8 +45,7 @@ def partial_trace(X, discard_first = True):
         Y = np.einsum("jiki->jk", X)
     return Y
 
-def expectation_value(state, observable, q_map):
-    state = q_map.apply_map(state)
+def expectation_value(state, observable):
     ev = np.trace(observable@state)
     return ev
 
