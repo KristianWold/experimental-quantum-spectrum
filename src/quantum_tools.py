@@ -105,6 +105,7 @@ def pauli_observable(config, return_mode = "density"):
         result = kron(*string)
 
     if return_mode == "circuit":
+
         n_sub = sum([idx != 0 for idx in config])
         n_count = 0
 
@@ -112,13 +113,14 @@ def pauli_observable(config, return_mode = "density"):
         c_reg = qk.ClassicalRegister(n_sub)
         circuit = qk.QuantumCircuit(q_reg, c_reg)
 
-        for i, index in enumerate(config):
+        for i, index in enumerate(reversed(config)):
             if index == 1:
                 circuit.h(i)
 
             if index == 2:
-                circuit.rz(-np.pi/2, i)    
+                circuit.sdg(i)
                 circuit.h(i)
+
 
             if index == 3:
                 pass    #measure in computational basis
@@ -130,6 +132,19 @@ def pauli_observable(config, return_mode = "density"):
         result = circuit
 
     return result
+
+def expected_parity(counts):
+    shots = sum(counts.values())
+    parity = 0
+    for string, count in counts.items():
+
+        if string.count("1")%2 == 0:
+            parity += count
+        else:
+            parity -= count
+
+    parity = parity/shots
+    return parity
 
 
 #@profile
