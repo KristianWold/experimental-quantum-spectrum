@@ -21,7 +21,7 @@ def state_density_loss(q_map, input, target, grad=False):
 def expectation_value_loss(q_map, input, target, grad=False):
     state, observable = input
     state = q_map.apply_map(state)
-    output = expectation_value(state, observable, q_map)
+    output = expectation_value(state, observable)
     cost = np.abs(output - target)**2
     return cost
 

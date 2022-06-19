@@ -92,7 +92,7 @@ def kron(*args):
     return A
 
 
-def pauli_observable(config):
+def pauli_observable(config, return_mode = "density"):
     I = np.eye(2)
     X = np.array([[0, 1], [1, 0]])
     Y = np.array([[0, -1j], [1j, 0]])
@@ -100,10 +100,36 @@ def pauli_observable(config):
 
     basis = [I, X, Y, Z]
 
-    string = [basis[i] for i in config]
-    observable = kron(*string)
+    if return_mode == "density":
+        string = [basis[idx] for idx in config]
+        result = kron(*string)
 
-    return observable
+    if return_mode == "circuit":
+        n_sub = sum([idx != 0 for idx in config])
+        n_count = 0
+
+        q_reg = qk.QuantumRegister(len(config))
+        c_reg = qk.ClassicalRegister(n_sub)
+        circuit = qk.QuantumCircuit(q_reg, c_reg)
+
+        for i, index in enumerate(config):
+            if index == 1:
+                circuit.h(i)
+
+            if index == 2:
+                circuit.rz(-np.pi/2, i)    
+                circuit.h(i)
+
+            if index == 3:
+                pass    #measure in computational basis
+
+            if index != 0:
+                circuit.measure(q_reg[i], c_reg[n_count])
+                n_count += 1
+
+        result = circuit
+
+    return result
 
 
 #@profile

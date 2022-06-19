@@ -71,8 +71,10 @@ class ModelQuantumMap:
         for step in tqdm(range(num_iter)):
 
             grad_list = [np.zeros_like(parameter) for parameter in self.q_map.parameter_list]
-            for batch in range(N):
-                index = np.random.randint(len(self.input_list))
+            index_list = list(range(len(self.input_list)))
+            random.shuffle(index_list)
+            batch_index = index_list[:N]
+            for index in batch_index:
                 self.input = self.input_list[index]
                 self.target = self.target_list[index]
 
