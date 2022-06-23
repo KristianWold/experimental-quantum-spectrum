@@ -7,6 +7,7 @@ from qiskit.quantum_info import DensityMatrix
 from qiskit.quantum_info import Operator
 from scipy.linalg import sqrtm
 from tqdm.notebook import tqdm
+from copy import deepcopy
 
 
 from quantum_tools import *
@@ -74,11 +75,13 @@ class ModelQuantumMap:
         self.adam = Adam()
         self.fid_list = []
         self.c_list = []
+        self.map_best = None
+        self.cost_best = 1e10
 
 #    @profile
     def train(self, num_iter, use_adam=False, verbose=True, N = 1, choi_target=None):
 
-        self.cost_average = sum([self.cost(self.q_map, input, target) for input, target in zip(self.input_val_list, self.target_val_list)])/len(self.input_val_list)
+        self.cost_average = self.calculate_val_cost()
 
         for step in tqdm(range(num_iter)):
 
@@ -102,7 +105,11 @@ class ModelQuantumMap:
 
             self.q_map.update_parameters(grad_list)
 
-            self.cost_average = sum([self.cost(self.q_map, input, target) for input, target in zip(self.input_val_list, self.target_val_list)])/len(self.input_val_list)
+            self.cost_average = self.calculate_val_cost()
+            if self.cost_average < self.cost_best:
+                self.cost_best = self.cost_average
+                self.map_best = deepcopy(self.q_map)
+
 
             c = 1/(1 + np.exp(-self.q_map.k[0,0]))
 
@@ -116,6 +123,12 @@ class ModelQuantumMap:
             self.c_list.append(c)
             if verbose:
                 print(f"{step}: fid: {fid:.5f}, c: {c:.3f}")
+
+    def calculate_val_cost(self):
+        cost = sum([self.cost(self.q_map, input, target) for input, target in zip(self.input_val_list, self.target_val_list)])
+        cost = cost/len(self.input_val_list)
+
+        return cost
 
 #    @profile
     def calculate_gradient(self, parameter):

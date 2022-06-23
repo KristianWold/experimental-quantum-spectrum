@@ -7,12 +7,80 @@ from qiskit.quantum_info import DensityMatrix
 from qiskit.quantum_info import Operator
 from scipy.linalg import sqrtm
 from tqdm.notebook import tqdm
+import multiprocessing as mp
+
+def train(num_iter):
+    def _train(model):
+        model.train(num_iter=num_iter,
+                    use_adam = True,
+                    verbose = False)
+        return model
+
+    return _train
+
+
+def train_parallel(num_iter, model_list, num_workers):
+    with mp.Pool(num_workers) as p:
+        p.map(train(num_iter), model_list)
+
+
+def generate_bitstring_circuits(n):
+    circuit_list = []
+    for i in range(2**n):
+        q_reg = qk.QuantumRegister(n)
+        c_reg = qk.ClassicalRegister(n)
+        circuit = qk.QuantumCircuit(q_reg, c_reg)
+        config = numberToBase(i, 2, n)
+        for j, index in enumerate(config):
+            if index:
+                circuit.x(j)
+        circuit.measure(q_reg, c_reg)
+        circuit_list.append(circuit)
+
+    return circuit_list
+
+
+def generate_corruption_matrix(n, counts_list):
+    corr_mat = np.zeros((2**n, 2**n))
+    for i, counts in enumerate(counts_list):
+        for string, value in counts.items():
+            index = int(string, 2)
+            corr_mat[i, index] = value
+
+    corr_mat = corr_mat/sum(counts_list[0].values())
+    corr_mat = np.linalg.inv(corr_mat)
+    return corr_mat
+
+
+def counts_to_vector(counts, n):
+    vec = np.zeros(2**n)
+    for string, value in counts.items():
+        index = int(string, 2)
+        vec[index] = value
+    vec = vec/sum(counts.values())
+    return vec
+
+def vector_to_counts(vector, n):
+    counts = {}
+    for i in range(2**n):
+        config = reversed(numberToBase(i, 2, n))
+        string = "".join([str(index) for index in config])
+
+        counts[string] = vector[i]
+
+    return counts
 
 
 
-def generate_pauli_circuits(circuit_target, N):
+
+def generate_pauli_circuits(circuit_target, N, trace=True):
     n = len(circuit_target.qregs[0])
-    state_index, observ_index = index_generator(n, N)
+    state_index, observ_index = index_generator(n, N, trace)
+
+    if trace:
+        num_observ = 4
+    else:
+        num_observ = 3
 
     input_list = []
     circuit_list = []
@@ -22,7 +90,7 @@ def generate_pauli_circuits(circuit_target, N):
         state = prepare_input(config)
         state_circuit = prepare_input(config, return_mode = "circuit")
 
-        config = numberToBase(j, 4, n)
+        config = numberToBase(j, num_observ, n)
         observable = pauli_observable(config)
         observable_circuit = pauli_observable(config, return_mode = "circuit")
 
@@ -59,9 +127,14 @@ def kron(*args):
     return A
 
 
-def index_generator(n, N=None):
+def index_generator(n, N=None, trace=True):
+
     index_list1 = np.arange(0, 6**n)
-    index_list2 = np.arange(1, 4**n)
+    if trace:
+        index_list2 = np.arange(1, 4**n)
+    else:
+        index_list2 = np.arange(0, 3**n)
+
     if N is None:
         N = len(index_list1)*len(index_list2)
 
