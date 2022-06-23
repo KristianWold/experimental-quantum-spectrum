@@ -10,6 +10,7 @@ from tqdm.notebook import tqdm
 
 from quantum_tools import *
 from cost_functions import *
+from utils import *
 
 def maps_to_choi(map_list):
     d = map_list[0].d
@@ -169,6 +170,8 @@ class KrausMap():
             k = -np.log(1/c - 1)
             self.k = np.array([[k]], dtype = "float64")
             self.parameter_list.append(self.k)
+        else:
+            self.k = np.array([[0]], dtype = "float64")
 
         self.kraus_list = None
         if generate_map:

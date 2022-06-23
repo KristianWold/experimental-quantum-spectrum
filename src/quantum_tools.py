@@ -7,6 +7,7 @@ from qiskit.quantum_info import DensityMatrix
 from qiskit.quantum_info import Operator
 from scipy.linalg import sqrtm
 from tqdm.notebook import tqdm
+from utils import *
 
 
 def state_fidelity(A, B):
@@ -24,17 +25,6 @@ def state_norm(A, B):
     return np.abs(norm)
 
 
-def numberToBase(n, b, num_digits):
-    digits = []
-    while n:
-        digits.append(int(n % b))
-        n //= b
-
-    while len(digits)<num_digits:
-        digits.append(0)
-    return digits[::-1]
-
-
 #@profile
 def partial_trace(X, discard_first = True):
     d = int(np.sqrt(X.shape[0]))
@@ -44,6 +34,7 @@ def partial_trace(X, discard_first = True):
     else:
         Y = np.einsum("jiki->jk", X)
     return Y
+
 
 def expectation_value(state, observable):
     ev = np.trace(observable@state)
@@ -81,15 +72,6 @@ def prepare_input(config, return_mode = "density"):
         state = circuit
 
     return state
-
-
-def kron(*args):
-    length = len(args)
-    A = args[0]
-    for i in range(1, length):
-        A = np.kron(A, args[i])
-
-    return A
 
 
 def pauli_observable(config, return_mode = "density"):
@@ -132,6 +114,7 @@ def pauli_observable(config, return_mode = "density"):
         result = circuit
 
     return result
+
 
 def expected_parity(counts):
     shots = sum(counts.values())
@@ -185,3 +168,14 @@ def choi_spectrum(choi):
     y = np.imag(eig)
 
     return np.array([x, y])
+
+
+def choi_steady_state(choi):
+    d = int(np.sqrt(choi.shape[0]))
+    choi = reshuffle_choi(choi)
+    _, eig_vec = np.linalg.eig(choi)
+
+    steady_state = eig_vec[:,0]
+    steady_state = steady_state.reshape(d, d)
+
+    return steady_state

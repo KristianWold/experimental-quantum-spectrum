@@ -12,6 +12,7 @@ from tqdm.notebook import tqdm
 from quantum_tools import *
 from cost_functions import *
 from quantum_maps import *
+from utils import *
 
 
 class Adam():
@@ -49,11 +50,21 @@ class Adam():
 
 class ModelQuantumMap:
 
-    def __init__(self, q_map, cost, input_list, target_list, lr, h):
+    def __init__(self,
+                 q_map,
+                 cost,
+                 input_list,
+                 target_list,
+                 input_val_list,
+                 target_val_list,
+                 lr,
+                 h):
         self.q_map = q_map
         self.cost = cost
         self.input_list = input_list
         self.target_list = target_list
+        self.input_val_list = input_val_list
+        self.target_val_list = target_val_list
         self.lr = lr
         self.h = h
 
@@ -62,11 +73,12 @@ class ModelQuantumMap:
 
         self.adam = Adam()
         self.fid_list = []
+        self.c_list = []
 
 #    @profile
     def train(self, num_iter, use_adam=False, verbose=True, N = 1, choi_target=None):
 
-        self.cost_average = sum([self.cost(self.q_map, input, target) for input, target in zip(self.input_list, self.target_list)])/len(self.input_list)
+        self.cost_average = sum([self.cost(self.q_map, input, target) for input, target in zip(self.input_val_list, self.target_val_list)])/len(self.input_val_list)
 
         for step in tqdm(range(num_iter)):
 
@@ -90,7 +102,7 @@ class ModelQuantumMap:
 
             self.q_map.update_parameters(grad_list)
 
-            self.cost_average = sum([self.cost(self.q_map, input, target) for input, target in zip(self.input_list, self.target_list)])/len(self.input_list)
+            self.cost_average = sum([self.cost(self.q_map, input, target) for input, target in zip(self.input_val_list, self.target_val_list)])/len(self.input_val_list)
 
             c = 1/(1 + np.exp(-self.q_map.k[0,0]))
 
@@ -101,8 +113,9 @@ class ModelQuantumMap:
                 fid = self.cost_average
 
             self.fid_list.append(fid)
+            self.c_list.append(c)
             if verbose:
-                print(f"{step}: fid: {fid:.3f}, c: {c:.3f}")
+                print(f"{step}: fid: {fid:.5f}, c: {c:.3f}")
 
 #    @profile
     def calculate_gradient(self, parameter):
