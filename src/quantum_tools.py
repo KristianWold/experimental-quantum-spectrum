@@ -74,13 +74,17 @@ def prepare_input(config, return_mode = "density"):
     return state
 
 
-def pauli_observable(config, return_mode = "density"):
-    I = np.eye(2)
+def pauli_observable(config, trace = True, return_mode = "density"):
+
     X = np.array([[0, 1], [1, 0]])
     Y = np.array([[0, -1j], [1j, 0]])
     Z = np.array([[1, 0], [0, -1]])
+    I = np.eye(2)
 
-    basis = [I, X, Y, Z]
+    basis = [X, Y, Z]
+
+    if trace:
+        basis.append(I)
 
     if return_mode == "density":
         string = [basis[idx] for idx in config]
@@ -88,7 +92,7 @@ def pauli_observable(config, return_mode = "density"):
 
     if return_mode == "circuit":
 
-        n_sub = sum([idx != 0 for idx in config])
+        n_sub = sum([idx != 3 for idx in config])
         n_count = 0
 
         q_reg = qk.QuantumRegister(len(config))
@@ -96,24 +100,58 @@ def pauli_observable(config, return_mode = "density"):
         circuit = qk.QuantumCircuit(q_reg, c_reg)
 
         for i, index in enumerate(reversed(config)):
-            if index == 1:
+            if index == 0:
                 circuit.h(i)
 
-            if index == 2:
+            if index == 1:
                 circuit.sdg(i)
                 circuit.h(i)
 
 
-            if index == 3:
+            if index == 2:
                 pass    #measure in computational basis
 
-            if index != 0:
+            if index != 3:
                 circuit.measure(q_reg[i], c_reg[n_count])
                 n_count += 1
 
         result = circuit
 
     return result
+
+
+def generate_pauli_circuits(circuit_target, N, trace=True):
+    n = len(circuit_target.qregs[0])
+    state_index, observ_index = index_generator(n, N, trace)
+
+    if trace:
+        num_observ = 4
+    else:
+        num_observ = 3
+
+    input_list = []
+    circuit_list = []
+    for i, j in zip(state_index, observ_index):
+
+        config = numberToBase(i, 6, n)
+        state = prepare_input(config)
+        state_circuit = prepare_input(config, return_mode = "circuit")
+
+        config = numberToBase(j, num_observ, n)
+        observable = pauli_observable(config)
+        observable_circuit = pauli_observable(config, return_mode = "circuit")
+
+        input_list.append([state, observable])
+        circuit = state_circuit
+        circuit.barrier()
+        circuit = circuit.compose(circuit_target)
+        circuit.barrier()
+        circuit.add_register(observable_circuit.cregs[0])
+        circuit = circuit.compose(observable_circuit)
+
+        circuit_list.append(circuit)
+
+    return input_list, circuit_list
 
 
 def expected_parity(counts):

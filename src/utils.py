@@ -44,11 +44,10 @@ def generate_corruption_matrix(n, counts_list):
     corr_mat = np.zeros((2**n, 2**n))
     for i, counts in enumerate(counts_list):
         for string, value in counts.items():
-            index = int(string, 2)
+            index = int(string[::-1], 2)
             corr_mat[i, index] = value
 
     corr_mat = corr_mat/sum(counts_list[0].values())
-    corr_mat = np.linalg.inv(corr_mat)
     return corr_mat
 
 
@@ -69,42 +68,6 @@ def vector_to_counts(vector, n):
         counts[string] = vector[i]
 
     return counts
-
-
-
-
-def generate_pauli_circuits(circuit_target, N, trace=True):
-    n = len(circuit_target.qregs[0])
-    state_index, observ_index = index_generator(n, N, trace)
-
-    if trace:
-        num_observ = 4
-    else:
-        num_observ = 3
-
-    input_list = []
-    circuit_list = []
-    for i, j in zip(state_index, observ_index):
-
-        config = numberToBase(i, 6, n)
-        state = prepare_input(config)
-        state_circuit = prepare_input(config, return_mode = "circuit")
-
-        config = numberToBase(j, num_observ, n)
-        observable = pauli_observable(config)
-        observable_circuit = pauli_observable(config, return_mode = "circuit")
-
-        input_list.append([state, observable])
-        circuit = state_circuit
-        circuit.barrier()
-        circuit = circuit.compose(circuit_target)
-        circuit.barrier()
-        circuit.add_register(observable_circuit.cregs[0])
-        circuit = circuit.compose(observable_circuit)
-
-        circuit_list.append(circuit)
-
-    return input_list, circuit_list
 
 
 def numberToBase(n, b, num_digits):
@@ -131,7 +94,7 @@ def index_generator(n, N=None, trace=True):
 
     index_list1 = np.arange(0, 6**n)
     if trace:
-        index_list2 = np.arange(1, 4**n)
+        index_list2 = np.arange(0, 4**n-1)
     else:
         index_list2 = np.arange(0, 3**n)
 
