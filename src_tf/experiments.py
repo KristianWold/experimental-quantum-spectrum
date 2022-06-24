@@ -34,21 +34,21 @@ def prepare_input(config, return_mode = "density"):
             circuit.s(i)
 
     if return_mode == "density":
-        state = DensityMatrix(circuit).data
+        result = tf.convert_to_tensor(DensityMatrix(circuit).data, dtype=tf.complex128)
     if return_mode == "unitary":
-        state = Operator(circuit).data
+        result = Operator(circuit).data
     if return_mode == "circuit":
-        state = circuit
+        result = circuit
 
-    return state
+    return result
 
 
 def pauli_observable(config, trace = True, return_mode = "density"):
 
-    X = np.array([[0, 1], [1, 0]])
-    Y = np.array([[0, -1j], [1j, 0]])
-    Z = np.array([[1, 0], [0, -1]])
-    I = np.eye(2)
+    X = tf.Tensor([[0, 1], [1, 0]])
+    Y = tf.Tensor([[0, -1j], [1j, 0]])
+    Z = tf.Tensor([[1, 0], [0, -1]])
+    I = tf.eye(2)
 
     basis = [X, Y, Z]
 
@@ -57,7 +57,7 @@ def pauli_observable(config, trace = True, return_mode = "density"):
 
     if return_mode == "density":
         string = [basis[idx] for idx in config]
-        result = kron(*string)
+        result = tf.convert_to_tensor(kron(*string), dtype=tf.complex128)
 
     if return_mode == "circuit":
 
@@ -75,7 +75,6 @@ def pauli_observable(config, trace = True, return_mode = "density"):
             if index == 1:
                 circuit.sdg(i)
                 circuit.h(i)
-
 
             if index == 2:
                 pass    #measure in computational basis

@@ -15,22 +15,22 @@ from utils import *
 def state_density_loss(q_map, input, target, grad=False):
     state = input
     output = q_map.apply_map(input)
-    cost = -state_fidelity(output, target)
-    return cost
+    loss = -state_fidelity(output, target)
+    return loss
 
 
 def expectation_value_loss(q_map, input, target, grad=False):
     state, observable = input
     state = q_map.apply_map(state)
     output = expectation_value(state, observable)
-    cost = np.abs(output - target)**2
-    return cost
+    loss = np.abs(output - target)**2
+    return loss
 
 
 def channel_fidelity_loss(q_map, input, target, grad=False):
     q_map_target = input
-    cost = -channel_fidelity(q_map, q_map_target)
-    return cost
+    loss = -channel_fidelity(q_map, q_map_target)
+    return loss
 
 
 class SpectrumDistance():
@@ -61,9 +61,9 @@ class SpectrumDistance():
                                                             num_iter = num_iter,
                                                             T = self.T)
 
-        cost = distance_list[-1]
+        loss = distance_list[-1]
 
-        return cost
+        return loss
 
 
 def greedy_pair_distance(a_list, b_list):

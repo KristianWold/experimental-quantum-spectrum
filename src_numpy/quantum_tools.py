@@ -10,6 +10,16 @@ from tqdm.notebook import tqdm
 from utils import *
 
 
+def partial_trace(X, discard_first = True):
+    d = int(np.sqrt(X.shape[0]))
+    X = np.reshape(X, (d,d,d,d))
+    if discard_first:
+        Y = np.einsum("ijik->jk", X)
+    else:
+        Y = np.einsum("jiki->jk", X)
+    return Y
+
+
 def state_fidelity(A, B):
 
     sqrtB = sqrtm(B)

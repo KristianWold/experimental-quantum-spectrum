@@ -24,7 +24,7 @@ def kron(*args):
     length = len(args)
     A = args[0]
     for i in range(1, length):
-        A = np.kron(A, args[i])
+        A = tf.experimental.numpy.kron(A, args[i])
 
     return A
 

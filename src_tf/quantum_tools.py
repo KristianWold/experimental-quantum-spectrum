@@ -10,6 +10,16 @@ from tqdm.notebook import tqdm
 from utils import *
 
 
+def partial_trace(X, discard_first = True):
+    d = int(np.sqrt(X.shape[0]))
+    X = tf.reshape(X, (d,d,d,d))
+    if discard_first:
+        Y = tf.einsum("ijik->jk", X)
+    else:
+        Y = tf.einsum("jiki->jk", X)
+    return Y
+
+
 def state_fidelity(A, B):
 
     sqrtB = sqrtm(B)
@@ -28,30 +38,13 @@ def channel_fidelity(map_A, map_B):
     return fidelity
 
 
-def state_norm(A, B):
-
-    norm = 1 - np.linalg.norm(A - B)
-    return np.abs(norm)
-
-
-#@profile
-def partial_trace(X, discard_first = True):
-    d = int(np.sqrt(X.shape[0]))
-    X = X.reshape(d,d,d,d)
-    if discard_first:
-        Y = np.einsum("ijik->jk", X)
-    else:
-        Y = np.einsum("jiki->jk", X)
-    return Y
-
-
 def expectation_value(state, observable):
     ev = np.trace(observable@state)
     return ev
 
 
 #@profile
-def generate_ginibre(dim1, dim2):
+def generate_ginibre(dim1, dim2, trainable = False):
     A = np.random.normal(0, 1, (dim1, dim2))
     B = np.random.normal(0, 1, (dim1, dim2))
     X = A + 1j*B
@@ -72,30 +65,3 @@ def generate_unitary(X):
     U = Q@np.diag(sign)
 
     return U
-
-
-def reshuffle_choi(choi):
-    d = int(np.sqrt(choi.shape[0]))
-    choi = choi.reshape(d,d,d,d).swapaxes(1,2).reshape(d**2, d**2)
-    return choi
-
-
-def choi_spectrum(choi):
-    choi = reshuffle_choi(choi)
-    eig, _ = np.linalg.eig(choi)
-
-    x = np.real(eig)
-    y = np.imag(eig)
-
-    return np.array([x, y])
-
-
-def choi_steady_state(choi):
-    d = int(np.sqrt(choi.shape[0]))
-    choi = reshuffle_choi(choi)
-    _, eig_vec = np.linalg.eig(choi)
-
-    steady_state = eig_vec[:,0]
-    steady_state = steady_state.reshape(d, d)
-
-    return steady_state
