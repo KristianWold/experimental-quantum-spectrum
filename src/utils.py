@@ -24,52 +24,6 @@ def train_parallel(num_iter, model_list, num_workers):
         p.map(train(num_iter), model_list)
 
 
-def generate_bitstring_circuits(n):
-    circuit_list = []
-    for i in range(2**n):
-        q_reg = qk.QuantumRegister(n)
-        c_reg = qk.ClassicalRegister(n)
-        circuit = qk.QuantumCircuit(q_reg, c_reg)
-        config = numberToBase(i, 2, n)
-        for j, index in enumerate(config):
-            if index:
-                circuit.x(j)
-        circuit.measure(q_reg, c_reg)
-        circuit_list.append(circuit)
-
-    return circuit_list
-
-
-def generate_corruption_matrix(n, counts_list):
-    corr_mat = np.zeros((2**n, 2**n))
-    for i, counts in enumerate(counts_list):
-        for string, value in counts.items():
-            index = int(string[::-1], 2)
-            corr_mat[i, index] = value
-
-    corr_mat = corr_mat/sum(counts_list[0].values())
-    return corr_mat
-
-
-def counts_to_vector(counts, n):
-    vec = np.zeros(2**n)
-    for string, value in counts.items():
-        index = int(string, 2)
-        vec[index] = value
-    vec = vec/sum(counts.values())
-    return vec
-
-def vector_to_counts(vector, n):
-    counts = {}
-    for i in range(2**n):
-        config = reversed(numberToBase(i, 2, n))
-        string = "".join([str(index) for index in config])
-
-        counts[string] = vector[i]
-
-    return counts
-
-
 def numberToBase(n, b, num_digits):
     digits = []
     while n:

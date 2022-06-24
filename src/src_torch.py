@@ -52,7 +52,7 @@ def pauli_observable(config):
     Y = torch.tensor([[0, -1j], [1j, 0]])
     Z = torch.tensor([[1, 0], [0, -1]])
 
-    basis = [I, X, Y, Z]
+    basis = [X, Y, Z]
 
     string = [basis[i] for i in config]
     observable = kron(*string).type(torch.complex128)
@@ -91,9 +91,10 @@ def prepare_input(config, return_unitary = False):
 
 
 def generate_ginibre(dim1, dim2, requires_grad=False):
-    A = np.random.normal(0, 1, (dim1, dim2))
+    std = 1
+    A = np.random.normal(0, std, (dim1, dim2))
     A = torch.from_numpy(A).type(torch.complex128)
-    B = np.random.normal(0, 1, (dim1, dim2))
+    B = np.random.normal(0, std, (dim1, dim2))
     B = torch.from_numpy(B).type(torch.complex128)
     if requires_grad:
         ginibre = A.requires_grad_() + 1j*B.requires_grad_()
@@ -130,7 +131,7 @@ def square_root(A):
 
 
 def generate_unitary(ginibre):
-    Q, R = torch.linalg.qr(ginibre)
+    Q, R = torch.linalg.qr(ginibre, mode="reduced")
     U = Q@torch.diag(torch.sgn(torch.diag(R)))
 
     return U
@@ -150,8 +151,7 @@ def kraus_to_choi(kraus_map):
     return choi
 
 
-def expectation_value(state, observable, map):
-    state = map.apply_map(state)
+def expectation_value(state, observable):
     ev = torch.trace(observable@state)
     return ev
 
