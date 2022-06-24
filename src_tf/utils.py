@@ -9,21 +9,6 @@ from scipy.linalg import sqrtm
 from tqdm.notebook import tqdm
 import multiprocessing as mp
 
-def train(num_iter):
-    def _train(model):
-        model.train(num_iter=num_iter,
-                    use_adam = True,
-                    verbose = False)
-        return model
-
-    return _train
-
-
-def train_parallel(num_iter, model_list, num_workers):
-    with mp.Pool(num_workers) as p:
-        p.map(train(num_iter), model_list)
-
-
 def numberToBase(n, b, num_digits):
     digits = []
     while n:
