@@ -43,17 +43,15 @@ def prepare_input(config, return_mode = "density"):
     return state
 
 
-def pauli_observable(config, trace = True, return_mode = "density"):
+def pauli_observable(config, return_mode = "density"):
 
     X = np.array([[0, 1], [1, 0]])
     Y = np.array([[0, -1j], [1j, 0]])
     Z = np.array([[1, 0], [0, -1]])
     I = np.eye(2)
 
-    basis = [X, Y, Z]
+    basis = [X, Y, Z, I]
 
-    if trace:
-        basis.append(I)
 
     if return_mode == "density":
         string = [basis[idx] for idx in config]
@@ -76,7 +74,6 @@ def pauli_observable(config, trace = True, return_mode = "density"):
                 circuit.sdg(i)
                 circuit.h(i)
 
-
             if index == 2:
                 pass    #measure in computational basis
 
@@ -85,6 +82,32 @@ def pauli_observable(config, trace = True, return_mode = "density"):
                 n_count += 1
 
         result = circuit
+
+    if return_mode == "unitary":
+
+        q_reg = qk.QuantumRegister(len(config))
+        c_reg = qk.ClassicalRegister(n_sub)
+        circuit = qk.QuantumCircuit(q_reg, c_reg)
+
+        for i, index in enumerate(reversed(config)):
+            if index == 0:
+                circuit.h(i)
+
+            if index == 1:
+                circuit.sdg(i)
+                circuit.h(i)
+
+            if index == 2:
+                pass    #measure in computational basis
+
+        trace_index_list = []
+
+        for i, idx in enumerate(config):
+            if idx == 3:
+                trace_index_list.append(i)
+
+
+        result = [Operator(circuit).data, trace_index_list]
 
     return result
 
@@ -154,7 +177,7 @@ def generate_bitstring_circuits(n):
 
 
 def generate_corruption_matrix(counts_list):
-    n = len(counts_list[0].keys()[0])
+    n = len(list(counts_list[0].keys())[0])
     corr_mat = np.zeros((2**n, 2**n))
     for i, counts in enumerate(counts_list):
         for string, value in counts.items():
@@ -166,7 +189,7 @@ def generate_corruption_matrix(counts_list):
 
 
 def counts_to_vector(counts):
-    n = len(counts.keys()[0])
+    n = len(list(counts.keys())[0])
     vec = np.zeros(2**n)
     for string, value in counts.items():
         index = int(string, 2)
@@ -185,3 +208,12 @@ def vector_to_counts(vector):
         counts[string] = vector[i]
 
     return counts
+
+def corr_mat_to_povm(corr_mat):
+    d = corr_map.shape[0]
+    povm = []
+    for i in range(d):
+        M = np.diag(corr_mat[:,i])
+        povm.append(M)
+
+    return povm

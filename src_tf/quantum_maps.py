@@ -3,13 +3,14 @@ import qiskit as qk
 import matplotlib.pyplot as plt
 import multiprocessing as mp
 import random
+import tensorflow as tf
 from qiskit.quantum_info import DensityMatrix
 from qiskit.quantum_info import Operator
 from scipy.linalg import sqrtm
 from tqdm.notebook import tqdm
 
 from quantum_tools import *
-from cost_functions import *
+from loss_functions import *
 from utils import *
 
 def maps_to_choi(map_list):

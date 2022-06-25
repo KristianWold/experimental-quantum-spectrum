@@ -3,6 +3,8 @@ import qiskit as qk
 import matplotlib.pyplot as plt
 import multiprocessing as mp
 import random
+import tensorflow as tf
+
 from qiskit.quantum_info import DensityMatrix
 from qiskit.quantum_info import Operator
 from scipy.linalg import sqrtm

@@ -3,11 +3,13 @@ import qiskit as qk
 import matplotlib.pyplot as plt
 import multiprocessing as mp
 import random
+import tensorflow as tf
 from qiskit.quantum_info import DensityMatrix
 from qiskit.quantum_info import Operator
 from scipy.linalg import sqrtm
 from tqdm.notebook import tqdm
 from utils import *
+
 
 
 def partial_trace(X, discard_first = True):
@@ -58,10 +60,11 @@ def generate_state(d, rank):
     return state
 
 
-def generate_unitary(X):
-    Q, R = np.linalg.qr(X)
-    R = np.diag(R)
-    sign = R/np.abs(R)
-    U = Q@np.diag(sign)
+def generate_unitary(G):
+    Q, R = tf.linalg.qr(G, full_matrices = False)
+    D = tf.linalg.tensor_diag_part(R)
+    D = tf.math.sign(D)
+    D = tf.linalg.diag(D)
+    U = Q@D
 
     return U

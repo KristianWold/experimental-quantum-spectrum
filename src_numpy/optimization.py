@@ -11,7 +11,7 @@ from copy import deepcopy
 
 
 from quantum_tools import *
-from cost_functions import *
+from loss_functions import *
 from quantum_maps import *
 from utils import *
 

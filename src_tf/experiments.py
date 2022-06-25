@@ -3,6 +3,8 @@ import qiskit as qk
 import matplotlib.pyplot as plt
 import multiprocessing as mp
 import random
+import tensorflow as tf
+
 from qiskit.quantum_info import DensityMatrix
 from qiskit.quantum_info import Operator
 from scipy.linalg import sqrtm
@@ -34,7 +36,7 @@ def prepare_input(config, return_mode = "density"):
             circuit.s(i)
 
     if return_mode == "density":
-        result = tf.convert_to_tensor(DensityMatrix(circuit).data, dtype=tf.complex128)
+        result = tf.convert_to_tensor(DensityMatrix(circuit).data, dtype=tf.complex64)
     if return_mode == "unitary":
         result = Operator(circuit).data
     if return_mode == "circuit":
@@ -45,10 +47,10 @@ def prepare_input(config, return_mode = "density"):
 
 def pauli_observable(config, trace = True, return_mode = "density"):
 
-    X = tf.Tensor([[0, 1], [1, 0]])
-    Y = tf.Tensor([[0, -1j], [1j, 0]])
-    Z = tf.Tensor([[1, 0], [0, -1]])
-    I = tf.eye(2)
+    X = tf.convert_to_tensor(np.array([[0, 1], [1, 0]]),    dtype=tf.complex64)
+    Y = tf.convert_to_tensor(np.array([[0, -1j], [1j, 0]]), dtype=tf.complex64)
+    Z = tf.convert_to_tensor(np.array([[1, 0], [0, -1]]),   dtype=tf.complex64)
+    I = tf.eye(2, dtype=tf.complex64)
 
     basis = [X, Y, Z]
 
@@ -57,7 +59,7 @@ def pauli_observable(config, trace = True, return_mode = "density"):
 
     if return_mode == "density":
         string = [basis[idx] for idx in config]
-        result = tf.convert_to_tensor(kron(*string), dtype=tf.complex128)
+        result = tf.convert_to_tensor(kron(*string), dtype=tf.complex64)
 
     if return_mode == "circuit":
 

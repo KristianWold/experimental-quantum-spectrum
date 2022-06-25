@@ -9,7 +9,7 @@ from scipy.linalg import sqrtm
 from tqdm.notebook import tqdm
 
 from quantum_tools import *
-from cost_functions import *
+from loss_functions import *
 from utils import *
 
 def maps_to_choi(map_list):
@@ -42,6 +42,15 @@ def choi_spectrum(choi):
     y = np.imag(eig)
 
     return np.array([x, y])
+
+
+def channel_fidelity(map_A, map_B):
+    choi_A = maps_to_choi([map_A])
+    choi_B = maps_to_choi([map_B])
+    d_squared = choi_A.shape[0]
+    fidelity = state_fidelity(choi_A, choi_B)/d_squared
+
+    return fidelity
 
 
 class ChoiMap():
@@ -149,7 +158,8 @@ class KrausMap():
                  c=None,
                  d=None,
                  rank = None,
-                 generate_map = True):
+                 generate_map = True
+                 ):
         self.U = U
         self.d = d
         self.rank = rank
@@ -183,9 +193,12 @@ class KrausMap():
 
         self.kraus_list.extend([np.sqrt(1-c)*U[i*d:(i+1)*d, :d] for i in range(self.rank)])
 
-    def apply_map(self, state):
+    def apply_map(self, state, measure = False):
 
         state = sum([K@state@K.T.conj() for K in self.kraus_list])
+        if measure:
+            state = sum([M@state@M.T.conj() for K in self.povm])
+
         return state
 
     def update_parameters(self, weight_gradient_list):
