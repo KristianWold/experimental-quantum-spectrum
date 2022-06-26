@@ -46,29 +46,6 @@ def partial_trace(X, discard_first = True):
     return Y
 
 
-def expectation_value(probs, observable):
-    ev = np.sum(probs*observable)
-    return ev
-
-
-def measurement(state, U_basis, povm):
-    state = U_basis@state@U_basis.T.conj()
-    state = sum([M@state@M.T.conj() for M in povm])
-    probs = np.diag(state)
-    return probs
-
-
-def parity_observable(n, trace_index_list=[]):
-    Z = np.array([[1, 0], [0, -1]])
-    I = np.eye(2)
-
-    observable = n*[Z]
-    for index in trace_index_list:
-        observable[index] = I
-
-    observable = np.diag(kron(*observable))
-    return observable
-
 #@profile
 def generate_ginibre(dim1, dim2):
     A = np.random.normal(0, 1, (dim1, dim2))

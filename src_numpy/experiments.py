@@ -58,11 +58,11 @@ def pauli_observable(config, return_mode = "density"):
         result = kron(*string)
 
 
-    q_reg = qk.QuantumRegister(len(config))
-    c_reg = qk.ClassicalRegister(n_sub)
+    q_reg = qk.QuantumRegister(n)
+    c_reg = qk.ClassicalRegister(n)
     circuit = qk.QuantumCircuit(q_reg, c_reg)
 
-    for i, index in enumerate(reversed(config)):
+    for i, index in enumerate(config):
         if index == 0:
             circuit.h(i)
 
@@ -74,11 +74,11 @@ def pauli_observable(config, return_mode = "density"):
             pass    #measure in computational basis
 
 
-    if return_mode == "circuit"
+    if return_mode == "circuit":
         circuit.measure(q_reg, c_reg)
         result = circuit
 
-    if return_mode == "unitary"
+    if return_mode == "unitary":
         trace_index_list = []
 
         for i, idx in enumerate(config):
@@ -162,30 +162,30 @@ def generate_corruption_matrix(counts_list):
     for i, counts in enumerate(counts_list):
         for string, value in counts.items():
             index = int(string[::-1], 2)
-            corr_mat[i, index] = value
+            corr_mat[index, i] = value
 
     corr_mat = corr_mat/sum(counts_list[0].values())
     return corr_mat
 
 
-def counts_to_vector(counts):
+def counts_to_probs(counts):
     n = len(list(counts.keys())[0])
-    vec = np.zeros(2**n)
+    probs = np.zeros(2**n)
     for string, value in counts.items():
-        index = int(string, 2)
-        vec[index] = value
-    vec = vec/sum(counts.values())
-    return vec
+        index = int(string[::-1], 2)
+        probs[index] = value
+    probs = probs/sum(counts.values())
+    return probs
 
 
-def vector_to_counts(vector):
-    n = int(np.log2(len(vector)))
+def probs_to_counts(probs):
+    n = int(np.log2(len(probs)))
     counts = {}
     for i in range(2**n):
         config = reversed(numberToBase(i, 2, n))
         string = "".join([str(index) for index in config])
 
-        counts[string] = vector[i]
+        counts[string[::-1]] = probs[i]
 
     return counts
 
@@ -193,7 +193,39 @@ def corr_mat_to_povm(corr_mat):
     d = corr_mat.shape[0]
     povm = []
     for i in range(d):
-        M = np.diag(corr_mat[:,i])
+        M = np.diag(corr_mat[i,:])
         povm.append(M)
 
     return povm
+
+
+def expectation_value(probs, observable):
+    ev = np.abs(np.sum(probs*observable))
+    return ev
+
+
+def measurement(state, U_basis=None, povm=None):
+    d = state.shape[0]
+    if U_basis is None:
+        U_basis = np.eye(d)
+
+    if povm is None:
+        povm = corr_mat_to_povm(np.eye(d))
+
+    state = U_basis@state@U_basis.T.conj()
+    probs = np.zeros(d)
+    for i, M in enumerate(povm):
+        probs[i] = np.abs(np.trace(state@M))
+    return probs
+
+
+def parity_observable(n, trace_index_list=[]):
+    Z = np.array([[1, 0], [0, -1]])
+    I = np.eye(2)
+
+    observable = n*[Z]
+    for index in trace_index_list:
+        observable[index] = I
+
+    observable = np.diag(kron(*observable))
+    return observable

@@ -11,6 +11,7 @@ from tqdm.notebook import tqdm
 from quantum_tools import *
 from loss_functions import *
 from utils import *
+from experiments import *
 
 def maps_to_choi(map_list):
     d = map_list[0].d
@@ -44,9 +45,9 @@ def choi_spectrum(choi):
     return np.array([x, y])
 
 
-def channel_fidelity(map_A, map_B):
-    choi_A = maps_to_choi([map_A])
-    choi_B = maps_to_choi([map_B])
+def channel_fidelity(map_A_list, map_B_list):
+    choi_A = maps_to_choi(map_A_list)
+    choi_B = maps_to_choi(map_B_list)
     d_squared = choi_A.shape[0]
     fidelity = state_fidelity(choi_A, choi_B)/d_squared
 
@@ -201,12 +202,6 @@ class KrausMap():
     def apply_map(self, state):
 
         state = sum([K@state@K.T.conj() for K in self.kraus_list])
-
-        return state
-
-    def apply_povm(self, state):
-
-        state = sum([M@state@M.T.conj() for M in self.povm])
 
         return state
 
