@@ -44,7 +44,7 @@ def kron(*args):
     return A
 
 
-def index_generator(n, N=None, trace=True):
+def index_generator(n, N=None, trace=False):
 
     index_list1 = np.arange(0, 6**n)
     if trace:

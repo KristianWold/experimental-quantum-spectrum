@@ -18,7 +18,11 @@ from utils import *
 
 class Adam():
 
-    def __init__(self, lr=0.01, beta1=0.9, beta2=0.999, eps=1e-8):
+    def __init__(self,
+                 lr=0.01,
+                 beta1=0.9,
+                 beta2=0.999,
+                 eps=1e-8):
         self.lr = lr
         self.beta1 = beta1
         self.beta2 = beta2
@@ -49,17 +53,19 @@ class Adam():
 
         return weight_gradient_modified
 
+
 class ModelQuantumMap:
 
     def __init__(self,
-                 q_map,
-                 cost,
-                 input_list,
-                 target_list,
-                 input_val_list,
-                 target_val_list,
-                 lr,
-                 h):
+                 q_map = None,
+                 cost = None,
+                 input_list = None,
+                 target_list = None,
+                 input_val_list = None,
+                 target_val_list = None,
+                 lr = None,
+                 h = None):
+
         self.q_map = q_map
         self.cost = cost
         self.input_list = input_list
@@ -79,7 +85,12 @@ class ModelQuantumMap:
         self.cost_best = 1e10
 
 #    @profile
-    def train(self, num_iter, use_adam=False, verbose=True, N = 1, choi_target=None):
+    def train(self,
+              num_iter,
+              use_adam=False,
+              verbose=True,
+              N = 1,
+              choi_target=None):
 
         self.cost_average = self.calculate_val_cost()
 

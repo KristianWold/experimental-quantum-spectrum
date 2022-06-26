@@ -45,6 +45,7 @@ def prepare_input(config, return_mode = "density"):
 
 def pauli_observable(config, return_mode = "density"):
 
+    n = len(config)
     X = np.array([[0, 1], [1, 0]])
     Y = np.array([[0, -1j], [1j, 0]])
     Z = np.array([[1, 0], [0, -1]])
@@ -52,67 +53,46 @@ def pauli_observable(config, return_mode = "density"):
 
     basis = [X, Y, Z, I]
 
-
     if return_mode == "density":
         string = [basis[idx] for idx in config]
         result = kron(*string)
 
-    if return_mode == "circuit":
 
-        n_sub = sum([idx != 3 for idx in config])
-        n_count = 0
+    q_reg = qk.QuantumRegister(len(config))
+    c_reg = qk.ClassicalRegister(n_sub)
+    circuit = qk.QuantumCircuit(q_reg, c_reg)
 
-        q_reg = qk.QuantumRegister(len(config))
-        c_reg = qk.ClassicalRegister(n_sub)
-        circuit = qk.QuantumCircuit(q_reg, c_reg)
+    for i, index in enumerate(reversed(config)):
+        if index == 0:
+            circuit.h(i)
 
-        for i, index in enumerate(reversed(config)):
-            if index == 0:
-                circuit.h(i)
+        if index == 1:
+            circuit.sdg(i)
+            circuit.h(i)
 
-            if index == 1:
-                circuit.sdg(i)
-                circuit.h(i)
+        if index == 2:
+            pass    #measure in computational basis
 
-            if index == 2:
-                pass    #measure in computational basis
 
-            if index != 3:
-                circuit.measure(q_reg[i], c_reg[n_count])
-                n_count += 1
-
+    if return_mode == "circuit"
+        circuit.measure(q_reg, c_reg)
         result = circuit
 
-    if return_mode == "unitary":
-
-        q_reg = qk.QuantumRegister(len(config))
-        c_reg = qk.ClassicalRegister(n_sub)
-        circuit = qk.QuantumCircuit(q_reg, c_reg)
-
-        for i, index in enumerate(reversed(config)):
-            if index == 0:
-                circuit.h(i)
-
-            if index == 1:
-                circuit.sdg(i)
-                circuit.h(i)
-
-            if index == 2:
-                pass    #measure in computational basis
-
+    if return_mode == "unitary"
         trace_index_list = []
 
         for i, idx in enumerate(config):
             if idx == 3:
                 trace_index_list.append(i)
 
+        observable = parity_observable(n, trace_index_list)
 
-        result = [Operator(circuit).data, trace_index_list]
+        result = [Operator(circuit).data, observable]
 
     return result
 
 
-def generate_pauli_circuits(circuit_target, N, trace=True):
+def generate_pauli_circuits(circuit_target, N, trace=False):
     n = len(circuit_target.qregs[0])
     state_index, observ_index = index_generator(n, N, trace)
 
@@ -126,14 +106,14 @@ def generate_pauli_circuits(circuit_target, N, trace=True):
     for i, j in zip(state_index, observ_index):
 
         config = numberToBase(i, 6, n)
-        state = prepare_input(config)
+        state = prepare_input(config, return_mode = "density")
         state_circuit = prepare_input(config, return_mode = "circuit")
 
         config = numberToBase(j, num_observ, n)
-        observable = pauli_observable(config)
+        U_basis, observable = pauli_observable(config, return_mode = "unitary")
         observable_circuit = pauli_observable(config, return_mode = "circuit")
 
-        input_list.append([state, observable])
+        input_list.append([state, U_basis, observable])
         circuit = state_circuit
         circuit.barrier()
         circuit = circuit.compose(circuit_target)
@@ -210,7 +190,7 @@ def vector_to_counts(vector):
     return counts
 
 def corr_mat_to_povm(corr_mat):
-    d = corr_map.shape[0]
+    d = corr_mat.shape[0]
     povm = []
     for i in range(d):
         M = np.diag(corr_mat[:,i])

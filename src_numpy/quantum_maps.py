@@ -154,15 +154,17 @@ class SquareRootChoiMap():
 class KrausMap():
 
     def __init__(self,
-                 U=None,
-                 c=None,
-                 d=None,
+                 U = None,
+                 c = None,
+                 d = None,
                  rank = None,
+                 povm = None,
                  generate_map = True
                  ):
         self.U = U
         self.d = d
         self.rank = rank
+        self.povm = povm
 
         _, self.A, self.B = generate_ginibre(rank*d, d)
         self.parameter_list = [self.A, self.B]
@@ -173,6 +175,9 @@ class KrausMap():
             self.parameter_list.append(self.k)
         else:
             self.k = np.array([[0]], dtype = "float64")
+
+        if self.povm is None:
+            self.povm = corr_mat_to_povm(np.eye(self.d))
 
         self.kraus_list = None
         if generate_map:
@@ -193,11 +198,15 @@ class KrausMap():
 
         self.kraus_list.extend([np.sqrt(1-c)*U[i*d:(i+1)*d, :d] for i in range(self.rank)])
 
-    def apply_map(self, state, measure = False):
+    def apply_map(self, state):
 
         state = sum([K@state@K.T.conj() for K in self.kraus_list])
-        if measure:
-            state = sum([M@state@M.T.conj() for K in self.povm])
+
+        return state
+
+    def apply_povm(self, state):
+
+        state = sum([M@state@M.T.conj() for M in self.povm])
 
         return state
 
