@@ -182,7 +182,7 @@ def probs_to_counts(probs):
     n = int(np.log2(len(probs)))
     counts = {}
     for i in range(2**n):
-        config = reversed(numberToBase(i, 2, n))
+        config = numberToBase(i, 2, n)
         string = "".join([str(index) for index in config])
 
         counts[string[::-1]] = probs[i]
