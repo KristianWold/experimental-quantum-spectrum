@@ -198,6 +198,10 @@ def corr_mat_to_povm(corr_mat):
 
     return povm
 
+def povm_ideal(n):
+    povm = corr_mat_to_povm(np.eye(2**n))
+    return povm
+
 
 def expectation_value(probs, observable):
     ev = np.abs(np.sum(probs*observable))

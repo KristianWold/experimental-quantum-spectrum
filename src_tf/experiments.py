@@ -3,8 +3,6 @@ import qiskit as qk
 import matplotlib.pyplot as plt
 import multiprocessing as mp
 import random
-import tensorflow as tf
-
 from qiskit.quantum_info import DensityMatrix
 from qiskit.quantum_info import Operator
 from scipy.linalg import sqrtm
@@ -36,61 +34,66 @@ def prepare_input(config, return_mode = "density"):
             circuit.s(i)
 
     if return_mode == "density":
-        result = tf.convert_to_tensor(DensityMatrix(circuit).data, dtype=tf.complex64)
+        state = tf.covert_to_tensor(DensityMatrix(circuit).data)
     if return_mode == "unitary":
-        result = Operator(circuit).data
+        state = tf.covert_to_tensor(Operator(circuit).data)
     if return_mode == "circuit":
-        result = circuit
+        state = circuit
 
-    return result
+    return state
 
 
-def pauli_observable(config, trace = True, return_mode = "density"):
+def pauli_observable(config, return_mode = "density"):
 
-    X = tf.convert_to_tensor(np.array([[0, 1], [1, 0]]),    dtype=tf.complex64)
-    Y = tf.convert_to_tensor(np.array([[0, -1j], [1j, 0]]), dtype=tf.complex64)
-    Z = tf.convert_to_tensor(np.array([[1, 0], [0, -1]]),   dtype=tf.complex64)
-    I = tf.eye(2, dtype=tf.complex64)
+    n = len(config)
+    X = tf.comvert_to_tensor([[0, 1], [1, 0]], dtype = tf.complex64)
+    Y = tf.comvert_to_tensor([[0, -1j], [1j, 0]], dtype = tf.complex64)
+    Z = tf.comvert_to_tensor([[1, 0], [0, -1]], dtype = tf.complex64)
+    I = tf.eye(2, dtype = tf.complex64)
 
-    basis = [X, Y, Z]
-
-    if trace:
-        basis.append(I)
+    basis = [X, Y, Z, I]
 
     if return_mode == "density":
         string = [basis[idx] for idx in config]
-        result = tf.convert_to_tensor(kron(*string), dtype=tf.complex64)
+        result = kron(*string)
+
+
+    q_reg = qk.QuantumRegister(n)
+    c_reg = qk.ClassicalRegister(n)
+    circuit = qk.QuantumCircuit(q_reg, c_reg)
+
+    for i, index in enumerate(config):
+        if index == 0:
+            circuit.h(i)
+
+        if index == 1:
+            circuit.sdg(i)
+            circuit.h(i)
+
+        if index == 2:
+            pass    #measure in computational basis
+
 
     if return_mode == "circuit":
-
-        n_sub = sum([idx != 3 for idx in config])
-        n_count = 0
-
-        q_reg = qk.QuantumRegister(len(config))
-        c_reg = qk.ClassicalRegister(n_sub)
-        circuit = qk.QuantumCircuit(q_reg, c_reg)
-
-        for i, index in enumerate(reversed(config)):
-            if index == 0:
-                circuit.h(i)
-
-            if index == 1:
-                circuit.sdg(i)
-                circuit.h(i)
-
-            if index == 2:
-                pass    #measure in computational basis
-
-            if index != 3:
-                circuit.measure(q_reg[i], c_reg[n_count])
-                n_count += 1
-
+        circuit.measure(q_reg, c_reg)
         result = circuit
+
+    if return_mode == "unitary":
+        trace_index_list = []
+
+        for i, idx in enumerate(config):
+            if idx == 3:
+                trace_index_list.append(i)
+
+        observable = parity_observable(n, trace_index_list)
+
+        U_basis = tf.convert_to_tensor(Operator(circuit).data)
+        result = [U_basis, observable]
 
     return result
 
 
-def generate_pauli_circuits(circuit_target, N, trace=True):
+def generate_pauli_circuits(circuit_target, N, trace=False):
     n = len(circuit_target.qregs[0])
     state_index, observ_index = index_generator(n, N, trace)
 
@@ -104,14 +107,14 @@ def generate_pauli_circuits(circuit_target, N, trace=True):
     for i, j in zip(state_index, observ_index):
 
         config = numberToBase(i, 6, n)
-        state = prepare_input(config)
+        state = prepare_input(config, return_mode = "density")
         state_circuit = prepare_input(config, return_mode = "circuit")
 
         config = numberToBase(j, num_observ, n)
-        observable = pauli_observable(config)
+        U_basis, observable = pauli_observable(config, return_mode = "unitary")
         observable_circuit = pauli_observable(config, return_mode = "circuit")
 
-        input_list.append([state, observable])
+        input_list.append([state, U_basis, observable])
         circuit = state_circuit
         circuit.barrier()
         circuit = circuit.compose(circuit_target)
@@ -122,20 +125,6 @@ def generate_pauli_circuits(circuit_target, N, trace=True):
         circuit_list.append(circuit)
 
     return input_list, circuit_list
-
-
-def expected_parity(counts):
-    shots = sum(counts.values())
-    parity = 0
-    for string, count in counts.items():
-
-        if string.count("1")%2 == 0:
-            parity += count
-        else:
-            parity -= count
-
-    parity = parity/shots
-    return parity
 
 
 def generate_bitstring_circuits(n):
@@ -155,34 +144,79 @@ def generate_bitstring_circuits(n):
 
 
 def generate_corruption_matrix(counts_list):
-    n = len(counts_list[0].keys()[0])
+    n = len(list(counts_list[0].keys())[0])
     corr_mat = np.zeros((2**n, 2**n))
     for i, counts in enumerate(counts_list):
         for string, value in counts.items():
             index = int(string[::-1], 2)
-            corr_mat[i, index] = value
+            corr_mat[index, i] = value
 
     corr_mat = corr_mat/sum(counts_list[0].values())
     return corr_mat
 
 
-def counts_to_vector(counts):
-    n = len(counts.keys()[0])
-    vec = np.zeros(2**n)
+def counts_to_probs(counts):
+    n = len(list(counts.keys())[0])
+    probs = np.zeros(2**n)
     for string, value in counts.items():
-        index = int(string, 2)
-        vec[index] = value
-    vec = vec/sum(counts.values())
-    return vec
+        index = int(string[::-1], 2)
+        probs[index] = value
+    probs = probs/sum(counts.values())
+    return probs
 
 
-def vector_to_counts(vector):
-    n = int(np.log2(len(vector)))
+def probs_to_counts(probs):
+    n = int(np.log2(len(probs)))
     counts = {}
     for i in range(2**n):
-        config = reversed(numberToBase(i, 2, n))
+        config = numberToBase(i, 2, n)
         string = "".join([str(index) for index in config])
 
-        counts[string] = vector[i]
+        counts[string[::-1]] = probs[i]
 
     return counts
+
+def corr_mat_to_povm(corr_mat):
+    d = corr_mat.shape[0]
+    povm = []
+    for i in range(d):
+        M = np.diag(corr_mat[i,:])
+        povm.append(M)
+
+    return povm
+
+def povm_ideal(n):
+    povm = corr_mat_to_povm(np.eye(2**n))
+    return povm
+
+
+def expectation_value(probs, observable):
+    ev = np.abs(np.sum(probs*observable))
+    return ev
+
+
+def measurement(state, U_basis=None, povm=None):
+    d = state.shape[0]
+    if U_basis is None:
+        U_basis = np.eye(d)
+
+    if povm is None:
+        povm = corr_mat_to_povm(np.eye(d))
+
+    state = U_basis@state@U_basis.T.conj()
+    probs = np.zeros(d)
+    for i, M in enumerate(povm):
+        probs[i] = np.abs(np.trace(state@M))
+    return probs
+
+
+def parity_observable(n, trace_index_list=[]):
+    Z = np.array([[1, 0], [0, -1]])
+    I = np.eye(2)
+
+    observable = n*[Z]
+    for index in trace_index_list:
+        observable[index] = I
+
+    observable = np.diag(kron(*observable))
+    return observable
