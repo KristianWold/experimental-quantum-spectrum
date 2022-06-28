@@ -17,7 +17,7 @@ def prepare_input(config, return_mode = "density"):
     circuit = qk.QuantumCircuit(n)
     for i, gate in enumerate(config):
         if gate == 0:
-            circuit.i(i)
+            pass
         if gate == 1:
             circuit.x(i)
         if gate == 2:
@@ -94,7 +94,7 @@ def pauli_observable(config, return_mode = "density"):
 
 def generate_pauli_circuits(circuit_target, N, trace=False):
     n = len(circuit_target.qregs[0])
-    state_index, observ_index = index_generator(n, N, trace)
+    state_index, observ_index = index_generator(n, N, trace=trace)
 
     if trace:
         num_observ = 4
@@ -126,20 +126,6 @@ def generate_pauli_circuits(circuit_target, N, trace=False):
     return input_list, circuit_list
 
 
-def expected_parity(counts):
-    shots = sum(counts.values())
-    parity = 0
-    for string, count in counts.items():
-
-        if string.count("1")%2 == 0:
-            parity += count
-        else:
-            parity -= count
-
-    parity = parity/shots
-    return parity
-
-
 def generate_bitstring_circuits(n):
     circuit_list = []
     for i in range(2**n):
@@ -161,7 +147,7 @@ def generate_corruption_matrix(counts_list):
     corr_mat = np.zeros((2**n, 2**n))
     for i, counts in enumerate(counts_list):
         for string, value in counts.items():
-            index = int(string[::-1], 2)
+            index = int(string, 2)
             corr_mat[index, i] = value
 
     corr_mat = corr_mat/sum(counts_list[0].values())
@@ -172,7 +158,7 @@ def counts_to_probs(counts):
     n = len(list(counts.keys())[0])
     probs = np.zeros(2**n)
     for string, value in counts.items():
-        index = int(string[::-1], 2)
+        index = int(string, 2)
         probs[index] = value
     probs = probs/sum(counts.values())
     return probs
@@ -185,7 +171,7 @@ def probs_to_counts(probs):
         config = numberToBase(i, 2, n)
         string = "".join([str(index) for index in config])
 
-        counts[string[::-1]] = probs[i]
+        counts[string] = probs[i]
 
     return counts
 
