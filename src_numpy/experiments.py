@@ -34,11 +34,11 @@ def prepare_input(config, return_mode = "density"):
             circuit.s(i)
 
     if return_mode == "density":
-        state = DensityMatrix(circuit).data
+        state = DensityMatrix(circuit.reverse_bits()).data
     if return_mode == "unitary":
-        state = Operator(circuit).data
+        state = Operator(circuit.reverse_bits()).data
     if return_mode == "circuit":
-        state = circuit
+        state = circuit.reverse_bits()
 
     return state
 
@@ -76,7 +76,7 @@ def pauli_observable(config, return_mode = "density"):
 
     if return_mode == "circuit":
         circuit.measure(q_reg, c_reg)
-        result = circuit
+        result = circuit.reverse_bits()
 
     if return_mode == "unitary":
         trace_index_list = []
@@ -87,7 +87,7 @@ def pauli_observable(config, return_mode = "density"):
 
         observable = parity_observable(n, trace_index_list)
 
-        result = [Operator(circuit).data, observable]
+        result = [Operator(circuit.reverse_bits()).data, observable]
 
     return result
 
@@ -137,7 +137,7 @@ def generate_bitstring_circuits(n):
             if index:
                 circuit.x(j)
         circuit.measure(q_reg, c_reg)
-        circuit_list.append(circuit)
+        circuit_list.append(circuit.reverse_bits())
 
     return circuit_list
 
@@ -146,6 +146,8 @@ def generate_corruption_matrix(counts_list):
     n = len(list(counts_list[0].keys())[0])
     corr_mat = np.zeros((2**n, 2**n))
     for i, counts in enumerate(counts_list):
+        #idx = numberToBase(i, 2, n)
+        #idx = int("".join([str(j) for j in idx])[::-1], 2)
         for string, value in counts.items():
             index = int(string, 2)
             corr_mat[index, i] = value

@@ -29,6 +29,14 @@ def expectation_value_loss(q_map, input, target, grad=False):
     return cost
 
 
+def probs_loss(q_map, input, target, grad=False):
+    state, U_basis, observable = input
+    state = q_map.apply_map(state)
+    output = measurement(state, U_basis, q_map.povm)
+    cost = np.abs(np.sum((output - target)**2))
+    return cost
+
+
 def channel_fidelity_loss(q_map, input, target, grad=False):
     q_map_target = input
     cost = -channel_fidelity(q_map, q_map_target)

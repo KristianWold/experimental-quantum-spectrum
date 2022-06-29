@@ -25,7 +25,15 @@ def expectation_value_loss(q_map, input, target, grad=False):
     state, observable = input
     state = q_map.apply_map(state)
     output = expectation_value(state, observable)
-    loss = np.abs(output - target)**2
+    loss = tf.abs(output - target)**2
+    return loss
+
+
+def probs_loss(q_map, input, target, grad=False):
+    state, U_basis, observable = input
+    state = q_map.apply_map(state)
+    output = measurement(state, U_basis, q_map.povm)
+    loss = tf.math.reduce_mean((output - target)**2)
     return loss
 
 

@@ -29,28 +29,28 @@ class ModelQuantumMap:
                  optimizer,
                  ):
         self.q_map = q_map
-        self.cost = cost
+        self.loss = loss
         self.input_list = input_list
         self.target_list = target_list
         self.input_val_list = input_val_list
         self.target_val_list = target_val_list
-        self.lr = lr
-        self.h = h
-
-        self.d = q_map.d
-        self.rank = q_map.rank
+        self.optimizer = optimizer
 
 
 #   @profile
-    def train(self, num_iter, use_adam=False, verbose=True, N = 1, choi_target=None):
+    def train(self, num_iter, N = 1):
+        index_list = list(range(len(self.input_list)))
 
         for step in tqdm(range(num_iter)):
-            index_list = list(range(len(self.input_list)))
             random.shuffle(index_list)
             batch_list = index_list[:N]
 
             with tf.GradientTape() as tape:
-                loss = self.loss(self.input[batch_list], self.target_list[batch_list])
+                self.q_map.generate_map()
+                loss = sum([self.loss(self.q_map, self.input_list[index], self.target_list[index]) for index in batch_list])/N
 
-            grads = tape.gradient(loss, self.q_map.parameters)
-            self.optimizer.apply_gradients(zip(grads, self.q_map.parameters))
+            grads = tape.gradient(loss, self.q_map.parameter_list)
+            self.optimizer.apply_gradients(zip(grads, self.q_map.parameter_list))
+
+            loss = sum([self.loss(self.q_map, self.input_list[index], self.target_list[index]) for index in index_list])/len(index_list)
+            print(step, loss.numpy())

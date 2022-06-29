@@ -27,8 +27,8 @@ def state_fidelity(A, B):
     sqrtB = sqrtm(B)
     C = sqrtB@A@sqrtB
 
-    fidelity = np.trace(sqrtm(C))
-    return np.abs(fidelity)**2
+    fidelity = tf.trace(sqrtm(C))
+    return tf.abs(fidelity)**2
 
 
 def channel_fidelity(map_A, map_B):
@@ -41,14 +41,18 @@ def channel_fidelity(map_A, map_B):
 
 
 def expectation_value(state, observable):
-    ev = np.trace(observable@state)
+    ev = tf.linalg.trace(observable@state)
     return ev
 
 
 #@profile
 def generate_ginibre(dim1, dim2, trainable = False):
-    A = np.random.normal(0, 1, (dim1, dim2))
-    B = np.random.normal(0, 1, (dim1, dim2))
+    A = tf.convert_to_tensor(np.random.normal(0, 1, (dim1, dim2)), dtype = tf.complex64)
+    B = tf.convert_to_tensor(np.random.normal(0, 1, (dim1, dim2)), dtype = tf.complex64)
+    if trainable:
+        A = tf.Variable(A, trainable = True)
+        B = tf.Variable(B, trainable = True)
+
     X = A + 1j*B
     return X, A, B
 

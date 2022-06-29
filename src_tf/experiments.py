@@ -17,7 +17,7 @@ def prepare_input(config, return_mode = "density"):
     circuit = qk.QuantumCircuit(n)
     for i, gate in enumerate(config):
         if gate == 0:
-            circuit.i(i)
+            pass
         if gate == 1:
             circuit.x(i)
         if gate == 2:
@@ -34,11 +34,11 @@ def prepare_input(config, return_mode = "density"):
             circuit.s(i)
 
     if return_mode == "density":
-        state = tf.covert_to_tensor(DensityMatrix(circuit).data)
+        state = DensityMatrix(circuit.reverse_bits()).data
     if return_mode == "unitary":
-        state = tf.covert_to_tensor(Operator(circuit).data)
+        state = Operator(circuit.reverse_bits()).data
     if return_mode == "circuit":
-        state = circuit
+        state = circuit.reverse_bits()
 
     return state
 
@@ -46,10 +46,10 @@ def prepare_input(config, return_mode = "density"):
 def pauli_observable(config, return_mode = "density"):
 
     n = len(config)
-    X = tf.comvert_to_tensor([[0, 1], [1, 0]], dtype = tf.complex64)
-    Y = tf.comvert_to_tensor([[0, -1j], [1j, 0]], dtype = tf.complex64)
-    Z = tf.comvert_to_tensor([[1, 0], [0, -1]], dtype = tf.complex64)
-    I = tf.eye(2, dtype = tf.complex64)
+    X = np.array([[0, 1], [1, 0]])
+    Y = np.array([[0, -1j], [1j, 0]])
+    Z = np.array([[1, 0], [0, -1]])
+    I = np.eye(2)
 
     basis = [X, Y, Z, I]
 
@@ -76,7 +76,7 @@ def pauli_observable(config, return_mode = "density"):
 
     if return_mode == "circuit":
         circuit.measure(q_reg, c_reg)
-        result = circuit
+        result = circuit.reverse_bits()
 
     if return_mode == "unitary":
         trace_index_list = []
@@ -87,15 +87,14 @@ def pauli_observable(config, return_mode = "density"):
 
         observable = parity_observable(n, trace_index_list)
 
-        U_basis = tf.convert_to_tensor(Operator(circuit).data)
-        result = [U_basis, observable]
+        result = [Operator(circuit.reverse_bits()).data, observable]
 
     return result
 
 
 def generate_pauli_circuits(circuit_target, N, trace=False):
     n = len(circuit_target.qregs[0])
-    state_index, observ_index = index_generator(n, N, trace)
+    state_index, observ_index = index_generator(n, N, trace=trace)
 
     if trace:
         num_observ = 4
@@ -138,7 +137,7 @@ def generate_bitstring_circuits(n):
             if index:
                 circuit.x(j)
         circuit.measure(q_reg, c_reg)
-        circuit_list.append(circuit)
+        circuit_list.append(circuit.reverse_bits())
 
     return circuit_list
 
@@ -147,8 +146,10 @@ def generate_corruption_matrix(counts_list):
     n = len(list(counts_list[0].keys())[0])
     corr_mat = np.zeros((2**n, 2**n))
     for i, counts in enumerate(counts_list):
+        #idx = numberToBase(i, 2, n)
+        #idx = int("".join([str(j) for j in idx])[::-1], 2)
         for string, value in counts.items():
-            index = int(string[::-1], 2)
+            index = int(string, 2)
             corr_mat[index, i] = value
 
     corr_mat = corr_mat/sum(counts_list[0].values())
@@ -159,7 +160,7 @@ def counts_to_probs(counts):
     n = len(list(counts.keys())[0])
     probs = np.zeros(2**n)
     for string, value in counts.items():
-        index = int(string[::-1], 2)
+        index = int(string, 2)
         probs[index] = value
     probs = probs/sum(counts.values())
     return probs
@@ -172,7 +173,7 @@ def probs_to_counts(probs):
         config = numberToBase(i, 2, n)
         string = "".join([str(index) for index in config])
 
-        counts[string[::-1]] = probs[i]
+        counts[string] = probs[i]
 
     return counts
 

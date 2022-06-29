@@ -66,18 +66,19 @@ class KrausMap():
                  c = None,
                  d = None,
                  rank = None,
+                 trainable = True,
                  ):
 
         self.U = U
         self.d = d
         self.rank = rank
 
-        _, self.A, self.B = generate_ginibre(rank*d, d)
+        _, self.A, self.B = generate_ginibre(rank*d, d, trainable = trainable)
         self.parameter_list = [self.A, self.B]
 
         if self.U is not None:
-            k = -np.log(1/c - 1)
-            self.k = np.array([[k]], dtype = "float64")
+            k = np.log(1/c - 1)
+            self.k = -tf.Variable(tf.cast(k, dtype = tf.double), trainable = True)
             self.parameter_list.append(self.k)
         else:
             self.k = None
@@ -92,14 +93,13 @@ class KrausMap():
 
         self.kraus_list = []
         if self.U is not None:
-            c = 1/(1 + np.exp(-self.k[0,0]))
+            c = 1/(1 + tf.exp(-self.k))
             self.kraus_list.append(np.sqrt(c)*self.U)
+            self.kraus_list.extend([tf.sqrt(1-c)*U[i*d:(i+1)*d, :d] for i in range(self.rank)])
         else:
-            c = 0
-
-        self.kraus_list.extend([tf.sqrt(1-c)*U[i*d:(i+1)*d, :d] for i in range(self.rank)])
+            self.kraus_list.extend([U[i*d:(i+1)*d, :d] for i in range(self.rank)])
 
     def apply_map(self, state):
 
-        state = sum([K@state@K.T.conj() for K in self.kraus_list])
+        state = sum([K@state@tf.linalg.adjoint(K) for K in self.kraus_list])
         return state

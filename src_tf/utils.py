@@ -11,6 +11,7 @@ from scipy.linalg import sqrtm
 from tqdm.notebook import tqdm
 import multiprocessing as mp
 
+
 def numberToBase(n, b, num_digits):
     digits = []
     while n:
