@@ -12,6 +12,7 @@ from tqdm.notebook import tqdm
 
 from quantum_tools import *
 from utils import *
+from experiments import *
 
 
 def state_density_loss(q_map, input, target, grad=False):
@@ -33,7 +34,7 @@ def probs_loss(q_map, input, target, grad=False):
     state, U_basis, observable = input
     state = q_map.apply_map(state)
     output = measurement(state, U_basis, q_map.povm)
-    loss = tf.math.reduce_mean((output - target)**2)
+    loss = tf.math.reduce_sum((output - target)**2)
     return loss
 
 

@@ -12,6 +12,7 @@ from tqdm.notebook import tqdm
 from quantum_tools import *
 from loss_functions import *
 from utils import *
+from experiments import *
 
 def maps_to_choi(map_list):
     d = map_list[0].d
@@ -66,19 +67,21 @@ class KrausMap():
                  c = None,
                  d = None,
                  rank = None,
+                 povm = None,
                  trainable = True,
                  ):
 
         self.U = U
         self.d = d
         self.rank = rank
+        self.povm = povm
 
         _, self.A, self.B = generate_ginibre(rank*d, d, trainable = trainable)
         self.parameter_list = [self.A, self.B]
 
         if self.U is not None:
             k = np.log(1/c - 1)
-            self.k = -tf.Variable(tf.cast(k, dtype = tf.double), trainable = True)
+            self.k = -tf.Variable(tf.cast(k, dtype = tf.complex64), trainable = True)
             self.parameter_list.append(self.k)
         else:
             self.k = None

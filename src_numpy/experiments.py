@@ -43,6 +43,16 @@ def prepare_input(config, return_mode = "density"):
     return state
 
 
+def circuit_to_matrix(circuit, return_mode = "denisty"):
+    circuit = circuit.reverse_bits()
+    if return_mode == "denisty":
+        result = DensityMatrix(circuit).data
+    if return_mode == "unitary":
+        result = Operator(circuit).data
+
+    return result
+    
+
 def pauli_observable(config, return_mode = "density"):
 
     n = len(config)

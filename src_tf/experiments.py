@@ -177,14 +177,16 @@ def probs_to_counts(probs):
 
     return counts
 
+
 def corr_mat_to_povm(corr_mat):
     d = corr_mat.shape[0]
     povm = []
     for i in range(d):
-        M = np.diag(corr_mat[i,:])
+        M = tf.cast(np.diag(corr_mat[i,:]), dtype=tf.complex64)
         povm.append(M)
 
     return povm
+
 
 def povm_ideal(n):
     povm = corr_mat_to_povm(np.eye(2**n))
@@ -199,15 +201,17 @@ def expectation_value(probs, observable):
 def measurement(state, U_basis=None, povm=None):
     d = state.shape[0]
     if U_basis is None:
-        U_basis = np.eye(d)
+        U_basis = tf.eye(d, dtype=tf.complex64)
 
     if povm is None:
         povm = corr_mat_to_povm(np.eye(d))
 
-    state = U_basis@state@U_basis.T.conj()
-    probs = np.zeros(d)
+    state = U_basis@state@tf.linalg.adjoint(U_basis)
+    probs = []
     for i, M in enumerate(povm):
-        probs[i] = np.abs(np.trace(state@M))
+        probs.append(tf.linalg.trace(state@M))
+    probs = tf.convert_to_tensor(probs)
+
     return probs
 
 
