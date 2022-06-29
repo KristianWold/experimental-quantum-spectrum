@@ -207,6 +207,7 @@ def measurement(state, U_basis=None, povm=None):
         povm = corr_mat_to_povm(np.eye(d))
 
     state = U_basis@state@tf.linalg.adjoint(U_basis)
+    print(state.shape)
     probs = []
     for i, M in enumerate(povm):
         probs.append(tf.linalg.trace(state@M))

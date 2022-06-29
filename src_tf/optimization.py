@@ -53,5 +53,6 @@ class ModelQuantumMap:
             grads = tape.gradient(loss, self.q_map.parameter_list)
             self.optimizer.apply_gradients(zip(grads, self.q_map.parameter_list))
 
-            loss = sum([self.loss(self.q_map, self.input_list[index], self.target_list[index]) for index in index_list])/len(index_list)
+            loss = sum([self.loss(self.q_map, input, target) for input, target in zip(self.input_val_list, self.target_val_list)])
+            loss /= len(self.input_val_list)
             print(step, loss.numpy())
