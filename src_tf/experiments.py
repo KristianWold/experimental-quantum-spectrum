@@ -101,7 +101,7 @@ def generate_pauli_circuits(circuit_target, N, trace=False):
     else:
         num_observ = 3
 
-    input_list = []
+    input_list = [[],[]]
     circuit_list = []
     for i, j in zip(state_index, observ_index):
 
@@ -110,10 +110,11 @@ def generate_pauli_circuits(circuit_target, N, trace=False):
         state_circuit = prepare_input(config, return_mode = "circuit")
 
         config = numberToBase(j, num_observ, n)
-        U_basis, observable = pauli_observable(config, return_mode = "unitary")
+        U_basis, _ = pauli_observable(config, return_mode = "unitary")
         observable_circuit = pauli_observable(config, return_mode = "circuit")
 
-        input_list.append([state, U_basis, observable])
+        input_list[0].append(state)
+        input_list[1].append(U_basis)
         circuit = state_circuit
         circuit.barrier()
         circuit = circuit.compose(circuit_target)
@@ -122,6 +123,9 @@ def generate_pauli_circuits(circuit_target, N, trace=False):
         circuit = circuit.compose(observable_circuit)
 
         circuit_list.append(circuit)
+
+    input_list[0] = tf.convert_to_tensor(input_list[0], dtype=tf.complex64)
+    input_list[1] = tf.convert_to_tensor(input_list[1], dtype=tf.complex64)
 
     return input_list, circuit_list
 
@@ -146,8 +150,6 @@ def generate_corruption_matrix(counts_list):
     n = len(list(counts_list[0].keys())[0])
     corr_mat = np.zeros((2**n, 2**n))
     for i, counts in enumerate(counts_list):
-        #idx = numberToBase(i, 2, n)
-        #idx = int("".join([str(j) for j in idx])[::-1], 2)
         for string, value in counts.items():
             index = int(string, 2)
             corr_mat[index, i] = value
@@ -156,26 +158,17 @@ def generate_corruption_matrix(counts_list):
     return corr_mat
 
 
-def counts_to_probs(counts):
-    n = len(list(counts.keys())[0])
-    probs = np.zeros(2**n)
-    for string, value in counts.items():
-        index = int(string, 2)
-        probs[index] = value
-    probs = probs/sum(counts.values())
+def counts_to_probs(counts_list):
+    N = len(counts_list)
+    n = len(list(counts_list[0].keys())[0])
+    probs = np.zeros((N, 2**n))
+    for i in range(N):
+        for string, value in counts_list[i].items():
+            index = int(string, 2)
+            probs[i, index] = value
+    probs = probs/sum(counts_list[0].values())
+    probs = tf.convert_to_tensor(probs, dtype=tf.complex64)
     return probs
-
-
-def probs_to_counts(probs):
-    n = int(np.log2(len(probs)))
-    counts = {}
-    for i in range(2**n):
-        config = numberToBase(i, 2, n)
-        string = "".join([str(index) for index in config])
-
-        counts[string] = probs[i]
-
-    return counts
 
 
 def corr_mat_to_povm(corr_mat):
@@ -185,6 +178,8 @@ def corr_mat_to_povm(corr_mat):
         M = tf.cast(np.diag(corr_mat[i,:]), dtype=tf.complex64)
         povm.append(M)
 
+    povm = tf.convert_to_tensor(povm, dtype=tf.complex64)
+
     return povm
 
 
@@ -193,25 +188,22 @@ def povm_ideal(n):
     return povm
 
 
-def expectation_value(probs, observable):
-    ev = np.abs(np.sum(probs*observable))
-    return ev
-
-
 def measurement(state, U_basis=None, povm=None):
-    d = state.shape[0]
+    d = state.shape[1]
     if U_basis is None:
         U_basis = tf.eye(d, dtype=tf.complex64)
+        U_basis = tf.expand_dims(U_basis, axis = 0)
 
     if povm is None:
         povm = corr_mat_to_povm(np.eye(d))
 
-    state = U_basis@state@tf.linalg.adjoint(U_basis)
-    print(state.shape)
-    probs = []
-    for i, M in enumerate(povm):
-        probs.append(tf.linalg.trace(state@M))
-    probs = tf.convert_to_tensor(probs)
+    Ustate = tf.matmul(U_basis, state)
+    UstateU = tf.matmul(Ustate, U_basis, adjoint_b=True)
+
+    state = tf.expand_dims(UstateU, axis=1)
+    povm = tf.expand_dims(povm, axis=0)
+
+    probs = tf.linalg.trace(state@povm)
 
     return probs
 

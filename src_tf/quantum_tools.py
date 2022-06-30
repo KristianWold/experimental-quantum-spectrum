@@ -40,8 +40,8 @@ def channel_fidelity(map_A, map_B):
     return fidelity
 
 
-def expectation_value(state, observable):
-    ev = tf.linalg.trace(observable@state)
+def expectation_value(probs, observable):
+    ev = tf.abs(tf.reduce_sum(probs*observable, axis = 1))
     return ev
 
 

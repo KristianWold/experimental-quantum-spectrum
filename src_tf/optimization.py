@@ -21,38 +21,36 @@ from experiments import *
 class ModelQuantumMap:
 
     def __init__(self,
-                 q_map,
-                 loss,
-                 input_list,
-                 target_list,
-                 input_val_list,
-                 target_val_list,
-                 optimizer,
+                 q_map = None,
+                 loss = None,
+                 optimizer = None,
                  ):
         self.q_map = q_map
         self.loss = loss
-        self.input_list = input_list
-        self.target_list = target_list
-        self.input_val_list = input_val_list
-        self.target_val_list = target_val_list
         self.optimizer = optimizer
 
 
 #   @profile
-    def train(self, num_iter, N = 1):
-        index_list = list(range(len(self.input_list)))
+    def train(self,
+              inputs = None,
+              targets = None,
+              inputs_val = None,
+              targets_val = None,
+              num_iter = 1000,
+              N = 1):
+
+        indices = tf.range(targets.shape[0])
 
         for step in tqdm(range(num_iter)):
-            random.shuffle(index_list)
-            batch_list = index_list[:N]
+            batch = tf.random.shuffle(indices)[:N]
+            inputs_batch = [tf.gather(data, batch, axis=0) for data in inputs]
+            targets_batch = tf.gather(targets, batch, axis=0)
 
             with tf.GradientTape() as tape:
                 self.q_map.generate_map()
-                loss = sum([self.loss(self.q_map, self.input_list[index], self.target_list[index]) for index in batch_list])/N
+                loss = self.loss(self.q_map, inputs_batch, targets_batch)
 
             grads = tape.gradient(loss, self.q_map.parameter_list)
             self.optimizer.apply_gradients(zip(grads, self.q_map.parameter_list))
 
-            loss = sum([self.loss(self.q_map, input, target) for input, target in zip(self.input_val_list, self.target_val_list)])
-            loss /= len(self.input_val_list)
             print(step, loss.numpy())

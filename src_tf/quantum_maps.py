@@ -86,7 +86,7 @@ class KrausMap():
         else:
             self.k = None
 
-        self.kraus_list = None
+        self.kraus = None
         self.generate_map()
 
     def generate_map(self):
@@ -94,15 +94,17 @@ class KrausMap():
         G = self.A + 1j*self.B
         U = generate_unitary(G)
 
-        self.kraus_list = []
         if self.U is not None:
             c = 1/(1 + tf.exp(-self.k))
             self.kraus_list.append(np.sqrt(c)*self.U)
             self.kraus_list.extend([tf.sqrt(1-c)*U[i*d:(i+1)*d, :d] for i in range(self.rank)])
         else:
-            self.kraus_list.extend([U[i*d:(i+1)*d, :d] for i in range(self.rank)])
+            self.kraus = tf.reshape(U, (1, self.rank, self.d, self.d))
 
     def apply_map(self, state):
+        state = tf.expand_dims(state, axis=1)
+        Kstate = tf.matmul(self.kraus, state)
+        KstateK = tf.matmul(Kstate, self.kraus, adjoint_b=True)
+        state = tf.reduce_sum(KstateK, axis=1)
 
-        state = sum([K@state@tf.linalg.adjoint(K) for K in self.kraus_list])
         return state
