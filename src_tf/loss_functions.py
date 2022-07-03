@@ -35,7 +35,7 @@ def probs_loss(q_map, input, target, grad=False):
     d = state.shape[1]
     state = q_map.apply_map(state)
     output = measurement(state, U_basis, q_map.povm)
-    loss = d*tf.math.reduce_mean((output - target)**2)
+    loss = d**2*tf.math.reduce_mean((output - target)**2)
     return loss
 
 

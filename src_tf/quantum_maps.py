@@ -14,6 +14,7 @@ from loss_functions import *
 from utils import *
 from experiments import *
 
+
 def maps_to_choi(map_list):
     d = map_list[0].d
     choi = tf.zeros((d**2, d**2), dtype=tf.complex64)
@@ -39,9 +40,24 @@ def reshuffle_choi(choi):
     return choi
 
 
+def kraus_to_choi(kraus_map, reshuffle = True):
+    kraus = kraus_map.kraus
+    rank = kraus.shape[0]
+    choi = 0
+
+    for i in range(rank):
+        K = kraus[0, i]
+        choi = choi + tf.experimental.numpy.kron(tf.linalg.adjoint(K), K)
+
+    if reshuffle:
+        choi = reshuffle_choi(choi)
+
+    return choi
+
+
 def choi_spectrum(choi):
     choi = reshuffle_choi(choi)
-    eig, _ = np.linalg.eig(choi)
+    eig, _ = tf.linalg.eig(choi)
 
     x = np.real(eig)
     y = np.imag(eig)

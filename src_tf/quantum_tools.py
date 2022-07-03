@@ -47,8 +47,8 @@ def expectation_value(probs, observable):
 
 #@profile
 def generate_ginibre(dim1, dim2, trainable = False):
-    A = tf.convert_to_tensor(np.random.normal(0, 1, (dim1, dim2)), dtype = tf.complex64)
-    B = tf.convert_to_tensor(np.random.normal(0, 1, (dim1, dim2)), dtype = tf.complex64)
+    A = tf.cast(tf.random.normal((dim1, dim2), 0, 1), dtype = tf.complex64)
+    B = tf.cast(tf.random.normal((dim1, dim2), 0, 1), dtype = tf.complex64)
     if trainable:
         A = tf.Variable(A, trainable = True)
         B = tf.Variable(B, trainable = True)

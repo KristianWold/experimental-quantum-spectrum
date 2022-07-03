@@ -92,8 +92,7 @@ def pauli_observable(config, return_mode = "density"):
     return result
 
 
-def generate_pauli_circuits(circuit_target, N, trace=False):
-    n = len(circuit_target.qregs[0])
+def generate_pauli_circuits(n = None, circuit_target=None, N = None, trace=False, return_circuits = True):
     state_index, observ_index = index_generator(n, N, trace=trace)
 
     if trace:
@@ -107,22 +106,27 @@ def generate_pauli_circuits(circuit_target, N, trace=False):
 
         config = numberToBase(i, 6, n)
         state = prepare_input(config, return_mode = "density")
-        state_circuit = prepare_input(config, return_mode = "circuit")
+
 
         config = numberToBase(j, num_observ, n)
         U_basis, _ = pauli_observable(config, return_mode = "unitary")
-        observable_circuit = pauli_observable(config, return_mode = "circuit")
+
 
         input_list[0].append(state)
         input_list[1].append(U_basis)
-        circuit = state_circuit
-        circuit.barrier()
-        circuit = circuit.compose(circuit_target)
-        circuit.barrier()
-        circuit.add_register(observable_circuit.cregs[0])
-        circuit = circuit.compose(observable_circuit)
 
-        circuit_list.append(circuit)
+        if return_circuits:
+            state_circuit = prepare_input(config, return_mode = "circuit")
+            observable_circuit = pauli_observable(config, return_mode = "circuit")
+
+            circuit = state_circuit
+            circuit.barrier()
+            circuit = circuit.compose(circuit_target)
+            circuit.barrier()
+            circuit.add_register(observable_circuit.cregs[0])
+            circuit = circuit.compose(observable_circuit)
+
+            circuit_list.append(circuit)
 
     input_list[0] = tf.convert_to_tensor(input_list[0], dtype=tf.complex64)
     input_list[1] = tf.convert_to_tensor(input_list[1], dtype=tf.complex64)
