@@ -104,20 +104,20 @@ def generate_pauli_circuits(n = None, circuit_target=None, N = None, trace=False
     circuit_list = []
     for i, j in zip(state_index, observ_index):
 
-        config = numberToBase(i, 6, n)
-        state = prepare_input(config, return_mode = "density")
+        config1 = numberToBase(i, 6, n)
+        state = prepare_input(config1, return_mode = "density")
 
 
-        config = numberToBase(j, num_observ, n)
-        U_basis, _ = pauli_observable(config, return_mode = "unitary")
+        config2 = numberToBase(j, num_observ, n)
+        U_basis, _ = pauli_observable(config2, return_mode = "unitary")
 
 
         input_list[0].append(state)
         input_list[1].append(U_basis)
 
         if return_circuits:
-            state_circuit = prepare_input(config, return_mode = "circuit")
-            observable_circuit = pauli_observable(config, return_mode = "circuit")
+            state_circuit = prepare_input(config1, return_mode = "circuit")
+            observable_circuit = pauli_observable(config2, return_mode = "circuit")
 
             circuit = state_circuit
             circuit.barrier()
