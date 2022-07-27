@@ -12,26 +12,22 @@ from utils import *
 
 #@profile
 def prepare_input(config, return_mode = "density"):
-    """1 = |0>, 2 = |1>, 3 = |+>, 4 = |->, 5 = |+i>, 6 = |-i>"""
+    """0 = |0>, 1 = |1>, 2 = |+>, 3 = |->, 4 = |i+>, 5 = |i+>"""
     n = len(config)
     circuit = qk.QuantumCircuit(n)
     for i, gate in enumerate(config):
         if gate == 0:
             pass
         if gate == 1:
-            circuit.x(i)
+            circuit.rx(np.pi, i)
         if gate == 2:
-            circuit.h(i)
+            circuit.ry(np.pi/2, i)
         if gate == 3:
-            circuit.x(i)
-            circuit.h(i)
+            circuit.ry(-np.pi/2, i)
         if gate == 4:
-            circuit.h(i)
-            circuit.s(i)
+            circuit.rx(-np.pi/2, i)
         if gate == 5:
-            circuit.x(i)
-            circuit.h(i)
-            circuit.s(i)
+            circuit.rx(np.pi/2, i)
 
     if return_mode == "density":
         state = DensityMatrix(circuit.reverse_bits()).data
@@ -64,15 +60,13 @@ def pauli_observable(config, return_mode = "density"):
 
     for i, index in enumerate(config):
         if index == 0:
-            circuit.h(i)
+            circuit.ry(-np.pi/2, i)
 
         if index == 1:
-            circuit.sdg(i)
-            circuit.h(i)
+            circuit.rx(np.pi/2, i)
 
         if index == 2:
             pass    #measure in computational basis
-
 
     if return_mode == "circuit":
         circuit.measure(q_reg, c_reg)
