@@ -37,7 +37,8 @@ class ModelQuantumMap:
               inputs_val = None,
               targets_val = None,
               num_iter = 1000,
-              N = 1):
+              N = 1,
+              verbose = True):
 
         indices = tf.range(targets.shape[0])
 
@@ -53,4 +54,5 @@ class ModelQuantumMap:
             grads = tape.gradient(loss, self.q_map.parameter_list)
             self.optimizer.apply_gradients(zip(grads, self.q_map.parameter_list))
 
-            print(step, np.abs(loss.numpy()))
+            if verbose:
+                print(step, np.abs(loss.numpy()))

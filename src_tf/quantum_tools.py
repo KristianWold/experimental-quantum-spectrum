@@ -11,7 +11,6 @@ from tqdm.notebook import tqdm
 from utils import *
 
 
-
 def partial_trace(X, discard_first = True):
     d = int(np.sqrt(X.shape[0]))
     X = tf.reshape(X, (d,d,d,d))
@@ -24,10 +23,10 @@ def partial_trace(X, discard_first = True):
 
 def state_fidelity(A, B):
 
-    sqrtB = sqrtm(B)
+    sqrtB = tf.linalg.sqrtm(B)
     C = sqrtB@A@sqrtB
 
-    fidelity = tf.trace(sqrtm(C))
+    fidelity = tf.linalg.trace(sqrtm(C))
     return tf.abs(fidelity)**2
 
 
@@ -38,6 +37,25 @@ def channel_fidelity(map_A, map_B):
     fidelity = state_fidelity(choi_A, choi_B)/d_squared
 
     return fidelity
+
+
+def maps_to_choi(map_list):
+    d = map_list[0].d
+    choi = tf.zeros((d**2, d**2), dtype=tf.complex64)
+    M = np.zeros((d**2, d, d))
+    for i in range(d):
+        for j in range(d):
+            
+            M[d*i + j, i, j] = 1
+
+    M = tf.convert_to_tensor(M, dtype=tf.complex64)
+    M_prime = tf.identity(M)
+    for map in map_list:
+        M_prime = map.apply_map(M_prime)
+    for i in range(d**2):
+        choi += tf.experimental.numpy.kron(M_prime[i], M[i])
+
+    return choi
 
 
 def expectation_value(probs, observable):
@@ -72,3 +90,28 @@ def generate_unitary(G):
     U = Q@D
 
     return U
+
+
+def circuit_to_matrix(circuit):
+    U = Operator(circuit.reverse_bits()).data
+    U = tf.convert_to_tensor(U, dtype = tf.complex64)
+
+    return U
+
+
+def variational_circuit(n):
+    theta = np.random.uniform(-np.pi, np.pi, 4*n)
+    circuit = qk.QuantumCircuit(n)
+    for i, angle in enumerate(theta[:n]):
+        circuit.ry(angle, i)
+    
+    for i, angle in enumerate(theta[n:2*n]):
+        circuit.crx(angle, i, (i+1)%n)
+        
+    #for i, angle in enumerate(theta[2*n:3*n]):
+    #    circuit.ry(angle, i)
+        
+    #for i, angle in enumerate(theta[3*n:]):
+    #    circuit.crx(angle, (n-i)%n, n-i-1)
+    
+    return circuit

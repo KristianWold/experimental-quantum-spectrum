@@ -92,7 +92,10 @@ def pauli_observable(config, return_mode = "density"):
     return result
 
 
-def generate_pauli_circuits(n = None, circuit_target=None, N = None, trace=False, return_circuits = True):
+def generate_pauli_circuits(n = None, 
+                            circuit_target = None, 
+                            N = None, 
+                            trace=False):
     state_index, observ_index = index_generator(n, N, trace=trace)
 
     if trace:
@@ -115,7 +118,7 @@ def generate_pauli_circuits(n = None, circuit_target=None, N = None, trace=False
         input_list[0].append(state)
         input_list[1].append(U_basis)
 
-        if return_circuits:
+        if circuit_target is not None:
             state_circuit = prepare_input(config1, return_mode = "circuit")
             observable_circuit = pauli_observable(config2, return_mode = "circuit")
 

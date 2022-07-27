@@ -15,22 +15,6 @@ from utils import *
 from experiments import *
 
 
-def maps_to_choi(map_list):
-    d = map_list[0].d
-    choi = tf.zeros((d**2, d**2), dtype=tf.complex64)
-    for i in range(d):
-        for j in range(d):
-            M = tf.zeros((d, d), dtype=tf.complex64)
-            M[i,j] = 1
-            M_prime = tf.copy(M)
-            for map in map_list:
-                M_prime = map.apply_map(M_prime)
-
-            choi += np.kron(M_prime, M)
-
-    return choi
-
-
 def reshuffle_choi(choi):
     d = int(np.sqrt(choi.shape[0]))
     choi = tf.reshape(choi, (d,d,d,d))
@@ -90,14 +74,19 @@ class KrausMap():
         self.U = U
         self.d = d
         self.rank = rank
-        self.povm = povm
+        
+        if povm is None:
+            self.povm = povm_ideal(int(np.log2(d)))
+        else:
+            self.povm = povm
 
         _, self.A, self.B = generate_ginibre(rank*d, d, trainable = trainable)
         self.parameter_list = [self.A, self.B]
 
         if self.U is not None:
-            k = np.log(1/c - 1)
-            self.k = -tf.Variable(tf.cast(k, dtype = tf.complex64), trainable = True)
+            self.U = tf.expand_dims(tf.expand_dims(self.U, 0), 0)
+            k = -np.log(1/c - 1)
+            self.k = tf.Variable(tf.cast(k, dtype = tf.complex64), trainable = True)
             self.parameter_list.append(self.k)
         else:
             self.k = None
@@ -109,13 +98,12 @@ class KrausMap():
         d = self.d
         G = self.A + 1j*self.B
         U = generate_unitary(G)
+        self.kraus = tf.reshape(U, (1, self.rank, self.d, self.d))
 
         if self.U is not None:
             c = 1/(1 + tf.exp(-self.k))
-            self.kraus_list.append(np.sqrt(c)*self.U)
-            self.kraus_list.extend([tf.sqrt(1-c)*U[i*d:(i+1)*d, :d] for i in range(self.rank)])
-        else:
-            self.kraus = tf.reshape(U, (1, self.rank, self.d, self.d))
+            self.kraus = tf.concat([tf.sqrt(c)*self.U, tf.sqrt(1-c)*self.kraus], axis=1)
+            
 
     def apply_map(self, state):
         state = tf.expand_dims(state, axis=1)
