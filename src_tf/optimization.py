@@ -28,6 +28,8 @@ class ModelQuantumMap:
         self.q_map = q_map
         self.loss = loss
         self.optimizer = optimizer
+        self.loss_list = []
+        self.c_list = []
 
 
 #   @profile
@@ -53,6 +55,15 @@ class ModelQuantumMap:
 
             grads = tape.gradient(loss, self.q_map.parameter_list)
             self.optimizer.apply_gradients(zip(grads, self.q_map.parameter_list))
+
+            if targets_val is None:
+                pass
+            elif len(targets_val) == 1:
+                loss = channel_fidelity(self.q_map, targets_val[0])
+
+
+            self.loss_list.append(np.abs(loss.numpy()))
+            self.c_list.append(np.abs(self.q_map.c.numpy()))
 
             if verbose:
                 print(step, np.abs(loss.numpy()))

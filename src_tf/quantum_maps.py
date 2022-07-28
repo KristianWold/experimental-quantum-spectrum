@@ -103,6 +103,14 @@ class KrausMap():
         if self.U is not None:
             c = 1/(1 + tf.exp(-self.k))
             self.kraus = tf.concat([tf.sqrt(c)*self.U, tf.sqrt(1-c)*self.kraus], axis=1)
+
+    @property
+    def c(self):
+        if self.k is None:
+            c = None
+        else:
+            c = 1/(1 + tf.exp(-self.k))
+        return c
             
 
     def apply_map(self, state):

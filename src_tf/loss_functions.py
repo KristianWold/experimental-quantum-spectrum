@@ -40,7 +40,7 @@ def probs_loss(q_map, input, target, grad=False):
 
 
 def channel_fidelity_loss(q_map, input, target, grad=False):
-    q_map_target = input
+    q_map_target = target
     loss = -channel_fidelity(q_map, q_map_target)
     return loss
 
