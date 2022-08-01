@@ -9,6 +9,7 @@ from qiskit.quantum_info import Operator
 from scipy.linalg import sqrtm
 from tqdm.notebook import tqdm
 from utils import *
+from set_precision import *
 
 
 def partial_trace(X, discard_first = True):
@@ -41,14 +42,14 @@ def channel_fidelity(map_A, map_B):
 
 def maps_to_choi(map_list):
     d = map_list[0].d
-    choi = tf.zeros((d**2, d**2), dtype=tf.complex64)
+    choi = tf.zeros((d**2, d**2), dtype=precision)
     M = np.zeros((d**2, d, d))
     for i in range(d):
         for j in range(d):
             
             M[d*i + j, i, j] = 1
 
-    M = tf.convert_to_tensor(M, dtype=tf.complex64)
+    M = tf.convert_to_tensor(M, dtype=precision)
     M_prime = tf.identity(M)
     for map in map_list:
         M_prime = map.apply_map(M_prime)
@@ -65,8 +66,8 @@ def expectation_value(probs, observable):
 
 #@profile
 def generate_ginibre(dim1, dim2, trainable = False):
-    A = tf.cast(tf.random.normal((dim1, dim2), 0, 1), dtype = tf.complex64)
-    B = tf.cast(tf.random.normal((dim1, dim2), 0, 1), dtype = tf.complex64)
+    A = tf.cast(tf.random.normal((dim1, dim2), 0, 1), dtype = precision)
+    B = tf.cast(tf.random.normal((dim1, dim2), 0, 1), dtype = precision)
     if trainable:
         A = tf.Variable(A, trainable = True)
         B = tf.Variable(B, trainable = True)
@@ -94,7 +95,7 @@ def generate_unitary(G):
 
 def circuit_to_matrix(circuit):
     U = Operator(circuit.reverse_bits()).data
-    U = tf.convert_to_tensor(U, dtype = tf.complex64)
+    U = tf.convert_to_tensor(U, dtype = precision)
 
     return U
 

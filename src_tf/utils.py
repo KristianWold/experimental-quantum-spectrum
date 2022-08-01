@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import multiprocessing as mp
 import random
 import tensorflow as tf
+from set_precision import *
 
 from qiskit.quantum_info import DensityMatrix
 from qiskit.quantum_info import Operator

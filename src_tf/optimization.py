@@ -9,6 +9,7 @@ from qiskit.quantum_info import Operator
 from scipy.linalg import sqrtm
 from tqdm.notebook import tqdm
 from copy import deepcopy
+from set_precision import *
 
 
 from quantum_tools import *
@@ -16,6 +17,7 @@ from loss_functions import *
 from quantum_maps import *
 from utils import *
 from experiments import *
+from set_precision import *
 
 
 class ModelQuantumMap:
@@ -63,7 +65,10 @@ class ModelQuantumMap:
 
 
             self.loss_list.append(np.abs(loss.numpy()))
-            self.c_list.append(np.abs(self.q_map.c.numpy()))
+            if self.q_map.c is not None: 
+                self.c_list.append(np.abs(self.q_map.c.numpy()))
 
             if verbose:
                 print(step, np.abs(loss.numpy()))
+        
+        self.q_map.generate_map()

@@ -13,6 +13,7 @@ from quantum_tools import *
 from loss_functions import *
 from utils import *
 from experiments import *
+from set_precision import *
 
 
 def reshuffle_choi(choi):
@@ -86,7 +87,7 @@ class KrausMap():
         if self.U is not None:
             self.U = tf.expand_dims(tf.expand_dims(self.U, 0), 0)
             k = -np.log(1/c - 1)
-            self.k = tf.Variable(tf.cast(k, dtype = tf.complex64), trainable = True)
+            self.k = tf.Variable(tf.cast(k, dtype = precision), trainable = True)
             self.parameter_list.append(self.k)
         else:
             self.k = None

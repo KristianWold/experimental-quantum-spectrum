@@ -9,6 +9,7 @@ from scipy.linalg import sqrtm
 from tqdm.notebook import tqdm
 from quantum_tools import *
 from utils import *
+from set_precision import *
 
 #@profile
 def prepare_input(config, return_mode = "density"):
@@ -125,8 +126,8 @@ def generate_pauli_circuits(n = None,
 
             circuit_list.append(circuit)
 
-    input_list[0] = tf.convert_to_tensor(input_list[0], dtype=tf.complex64)
-    input_list[1] = tf.convert_to_tensor(input_list[1], dtype=tf.complex64)
+    input_list[0] = tf.convert_to_tensor(input_list[0], dtype=precision)
+    input_list[1] = tf.convert_to_tensor(input_list[1], dtype=precision)
 
     return input_list, circuit_list
 
@@ -168,7 +169,7 @@ def counts_to_probs(counts_list):
             index = int(string, 2)
             probs[i, index] = value
     probs = probs/sum(counts_list[0].values())
-    probs = tf.convert_to_tensor(probs, dtype=tf.complex64)
+    probs = tf.convert_to_tensor(probs, dtype=precision)
     return probs
 
 
@@ -176,10 +177,10 @@ def corr_mat_to_povm(corr_mat):
     d = corr_mat.shape[0]
     povm = []
     for i in range(d):
-        M = tf.cast(np.diag(corr_mat[i,:]), dtype=tf.complex64)
+        M = tf.cast(np.diag(corr_mat[i,:]), dtype=precision)
         povm.append(M)
 
-    povm = tf.convert_to_tensor(povm, dtype=tf.complex64)
+    povm = tf.convert_to_tensor(povm, dtype=precision)
 
     return povm
 
@@ -192,7 +193,7 @@ def povm_ideal(n):
 def measurement(state, U_basis=None, povm=None):
     d = state.shape[1]
     if U_basis is None:
-        U_basis = tf.eye(d, dtype=tf.complex64)
+        U_basis = tf.eye(d, dtype=precision)
         U_basis = tf.expand_dims(U_basis, axis = 0)
 
     if povm is None:
@@ -219,3 +220,48 @@ def parity_observable(n, trace_index_list=[]):
 
     observable = np.diag(kron(*observable))
     return observable
+
+
+class POVM:
+    def __init__(self, d, optimizer, trainable=True):
+        self.d = d
+        self.A = tf.cast(tf.random.normal((d, d, d), 0, 1), dtype = precision)
+        self.B = tf.cast(tf.random.normal((d, d, d), 0, 1), dtype = precision)
+
+        if trainable:
+            self.A = tf.Variable(self.A, trainable = True)
+            self.B = tf.Variable(self.B, trainable = True)
+
+        self.parameter_list = [self.A, self.B]
+        self.optimizer = optimizer
+
+        self.generate_POVM()
+    
+
+    def generate_POVM(self):
+        G = self.A + 1j*self.B
+        AA = tf.matmul(G, G, adjoint_b=True)
+        D = tf.math.reduce_sum(AA, axis = 0)
+        invsqrtD = tf.linalg.sqrtm(tf.linalg.inv(D))
+        self.povm = tf.matmul(tf.matmul(invsqrtD, AA), invsqrtD)
+    
+
+    def train(self, num_iter, inputs, targets, N = 1):
+        indices = tf.range(targets.shape[0])
+
+        for step in tqdm(range(num_iter)):
+            batch = tf.random.shuffle(indices)[:N]
+            inputs_batch = tf.gather(inputs, batch, axis=0)
+            targets_batch = tf.gather(targets, batch, axis=0)
+
+            with tf.GradientTape() as tape:
+                self.generate_POVM()
+                outputs = measurement(inputs_batch, povm=self.povm)
+
+                loss = self.d**2*tf.math.reduce_mean((outputs - targets_batch)**2)
+
+            grads = tape.gradient(loss, self.parameter_list)
+            self.optimizer.apply_gradients(zip(grads, self.parameter_list))
+            print(loss.numpy())
+        
+        self.generate_POVM()
