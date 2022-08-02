@@ -37,6 +37,12 @@ def prepare_input(config, return_mode = "density"):
     if return_mode == "circuit":
         state = circuit.reverse_bits()
 
+    if return_mode == "circuit_measure":
+        circuit.add_register(qk.ClassicalRegister(n))
+        circuit.measure(circuit.qregs[0], circuit.cregs[0])
+        state = circuit.reverse_bits()
+
+
     return state
 
 
@@ -236,15 +242,13 @@ class POVM:
         self.optimizer = optimizer
 
         self.generate_POVM()
-    
 
     def generate_POVM(self):
         G = self.A + 1j*self.B
         AA = tf.matmul(G, G, adjoint_b=True)
         D = tf.math.reduce_sum(AA, axis = 0)
-        invsqrtD = tf.linalg.sqrtm(tf.linalg.inv(D))
+        invsqrtD = tf.linalg.inv(tf.linalg.sqrtm(D))
         self.povm = tf.matmul(tf.matmul(invsqrtD, AA), invsqrtD)
-    
 
     def train(self, num_iter, inputs, targets, N = 1):
         indices = tf.range(targets.shape[0])
