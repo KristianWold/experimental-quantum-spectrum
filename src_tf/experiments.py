@@ -60,7 +60,6 @@ def pauli_observable(config, return_mode = "density"):
         string = [basis[idx] for idx in config]
         result = kron(*string)
 
-
     q_reg = qk.QuantumRegister(n)
     c_reg = qk.ClassicalRegister(n)
     circuit = qk.QuantumCircuit(q_reg, c_reg)
@@ -93,9 +92,9 @@ def pauli_observable(config, return_mode = "density"):
     return result
 
 
-def generate_pauli_circuits(n = None, 
-                            circuit_target = None, 
-                            N = None, 
+def generate_pauli_circuits(n = None,
+                            circuit_target = None,
+                            N = None,
                             trace=False):
     state_index, observ_index = index_generator(n, N, trace=trace)
 
@@ -267,5 +266,20 @@ class POVM:
             grads = tape.gradient(loss, self.parameter_list)
             self.optimizer.apply_gradients(zip(grads, self.parameter_list))
             print(loss.numpy())
-        
+
         self.generate_POVM()
+
+
+def variational_circuit(n):
+    theta = np.random.uniform(-np.pi, np.pi, 2*n)
+    circuit = qk.QuantumCircuit(n)
+    for i, angle in enumerate(theta[:n]):
+        circuit.ry(angle, i)
+
+    for i in range(n-1):
+        circuit.cnot(i, i+1)
+
+    for i, angle in enumerate(theta[n:2*n]):
+        circuit.rx(angle, i)
+
+    return circuit
