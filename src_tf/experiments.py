@@ -108,14 +108,13 @@ def generate_pauli_circuits(n = None,
     for i, j in zip(state_index, observ_index):
 
         config1 = numberToBase(i, 6, n)
-        state = prepare_input(config1, return_mode = "density")
-
+        U_prep = prepare_input(config1, return_mode = "unitary")
 
         config2 = numberToBase(j, num_observ, n)
         U_basis, _ = pauli_observable(config2, return_mode = "unitary")
 
 
-        input_list[0].append(state)
+        input_list[0].append(U_prep)
         input_list[1].append(U_basis)
 
         if circuit_target is not None:
@@ -190,8 +189,17 @@ def corr_mat_to_povm(corr_mat):
     return povm
 
 
+def init_ideal(n):
+    d = 2**n
+    init = np.zeros((d,d))
+    init[0, 0] = 1
+    init = tf.convert_to_tensor(init, dtype = precision)
+    return init
+
+
 def povm_ideal(n):
-    povm = corr_mat_to_povm(np.eye(2**n))
+    d = 2**n
+    povm = corr_mat_to_povm(np.eye(d))
     return povm
 
 
@@ -227,49 +235,6 @@ def parity_observable(n, trace_index_list=[]):
     return observable
 
 
-class POVM:
-    def __init__(self, d, optimizer, trainable=True):
-        self.d = d
-        self.A = tf.cast(tf.random.normal((d, d, d), 0, 1), dtype = precision)
-        self.B = tf.cast(tf.random.normal((d, d, d), 0, 1), dtype = precision)
-
-        if trainable:
-            self.A = tf.Variable(self.A, trainable = True)
-            self.B = tf.Variable(self.B, trainable = True)
-
-        self.parameter_list = [self.A, self.B]
-        self.optimizer = optimizer
-
-        self.generate_POVM()
-
-    def generate_POVM(self):
-        G = self.A + 1j*self.B
-        AA = tf.matmul(G, G, adjoint_b=True)
-        D = tf.math.reduce_sum(AA, axis = 0)
-        invsqrtD = tf.linalg.inv(tf.linalg.sqrtm(D))
-        self.povm = tf.matmul(tf.matmul(invsqrtD, AA), invsqrtD)
-
-    def train(self, num_iter, inputs, targets, N = 1):
-        indices = tf.range(targets.shape[0])
-
-        for step in tqdm(range(num_iter)):
-            batch = tf.random.shuffle(indices)[:N]
-            inputs_batch = tf.gather(inputs, batch, axis=0)
-            targets_batch = tf.gather(targets, batch, axis=0)
-
-            with tf.GradientTape() as tape:
-                self.generate_POVM()
-                outputs = measurement(inputs_batch, povm=self.povm)
-
-                loss = self.d**2*tf.math.reduce_mean((outputs - targets_batch)**2)
-
-            grads = tape.gradient(loss, self.parameter_list)
-            self.optimizer.apply_gradients(zip(grads, self.parameter_list))
-            print(loss.numpy())
-
-        self.generate_POVM()
-
-
 def variational_circuit(n):
     theta = np.random.uniform(-np.pi, np.pi, 2*n)
     circuit = qk.QuantumCircuit(n)
@@ -281,5 +246,8 @@ def variational_circuit(n):
 
     for i, angle in enumerate(theta[n:2*n]):
         circuit.rx(angle, i)
+
+    for i in reversed(range(n-1)):
+        circuit.cnot(i+1, i)
 
     return circuit

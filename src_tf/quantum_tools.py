@@ -46,7 +46,7 @@ def maps_to_choi(map_list):
     M = np.zeros((d**2, d, d))
     for i in range(d):
         for j in range(d):
-            
+
             M[d*i + j, i, j] = 1
 
     M = tf.convert_to_tensor(M, dtype=precision)
@@ -100,19 +100,25 @@ def circuit_to_matrix(circuit):
     return U
 
 
+def apply_unitary(state, U):
+    Ustate = tf.matmul(U, state)
+    state = tf.matmul(Ustate, U, adjoint_b=True)
+    return state
+
+
 def variational_circuit(n):
     theta = np.random.uniform(-np.pi, np.pi, 4*n)
     circuit = qk.QuantumCircuit(n)
     for i, angle in enumerate(theta[:n]):
         circuit.ry(angle, i)
-    
+
     for i, angle in enumerate(theta[n:2*n]):
         circuit.crx(angle, i, (i+1)%n)
-        
+
     #for i, angle in enumerate(theta[2*n:3*n]):
     #    circuit.ry(angle, i)
-        
+
     #for i, angle in enumerate(theta[3*n:]):
     #    circuit.crx(angle, (n-i)%n, n-i-1)
-    
+
     return circuit

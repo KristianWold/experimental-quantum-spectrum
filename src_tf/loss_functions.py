@@ -32,10 +32,15 @@ def expectation_value_loss(q_map, input, target, grad=False):
 
 
 def probs_loss(q_map, input, target, grad=False):
-    state, U_basis = input
-    d = state.shape[1]
+    N = target.shape[0]
+    d = q_map.spam.init.shape[0]
+
+    U_prep, U_basis = input
+
+    state = tf.repeat(tf.expand_dims(q_map.spam.init, axis=0), N, axis=0)
+    state = apply_unitary(state, U_prep)
     state = q_map.apply_map(state)
-    output = measurement(state, U_basis, q_map.povm)
+    output = measurement(state, U_basis, q_map.spam.povm)
     loss = d**2*tf.math.reduce_mean((output - target)**2)
     return loss
 

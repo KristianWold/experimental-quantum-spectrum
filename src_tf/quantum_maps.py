@@ -68,18 +68,19 @@ class KrausMap():
                  c = None,
                  d = None,
                  rank = None,
-                 povm = None,
+                 spam = None,
                  trainable = True,
                  ):
 
         self.U = U
         self.d = d
         self.rank = rank
-        
-        if povm is None:
-            self.povm = povm_ideal(int(np.log2(d)))
-        else:
-            self.povm = povm
+
+        #if povm is None:
+        #    self.povm = povm_ideal(int(np.log2(d)))
+        #else:
+        #    self.povm = povm
+        self.spam = spam
 
         _, self.A, self.B = generate_ginibre(rank*d, d, trainable = trainable)
         self.parameter_list = [self.A, self.B]
@@ -112,7 +113,7 @@ class KrausMap():
         else:
             c = 1/(1 + tf.exp(-self.k))
         return c
-            
+
 
     def apply_map(self, state):
         state = tf.expand_dims(state, axis=1)
