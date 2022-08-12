@@ -181,7 +181,7 @@ def corr_mat_to_povm(corr_mat):
     d = corr_mat.shape[0]
     povm = []
     for i in range(d):
-        M = tf.cast(np.diag(corr_mat[i,:]), dtype=precision)
+        M = tf.linalg.diag(corr_mat[i,:])
         povm.append(M)
 
     povm = tf.convert_to_tensor(povm, dtype=precision)

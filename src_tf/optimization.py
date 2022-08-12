@@ -181,11 +181,11 @@ class SPAM:
 
         if self.C is not None:
             if not self.use_corr_mat:
-                X = self.A + 1j*self.B
+                X = self.C + 1j*self.D
                 XX = tf.matmul(X, X, adjoint_b=True)
                 D = tf.math.reduce_sum(XX, axis = 0)
                 invsqrtD = tf.linalg.inv(tf.linalg.sqrtm(D))
-                self.povm = tf.matmul(tf.matmul(invsqrtD, AA), invsqrtD)
+                self.povm = tf.matmul(tf.matmul(invsqrtD, XX), invsqrtD)
 
             else:
                 X = tf.abs(self.C)
@@ -214,3 +214,21 @@ class SPAM:
             print(step, np.abs(loss.numpy()))
 
         self.generate_SPAM()
+
+    def pretrain(self, num_iter, targets):
+        init_target, povm_target = targets
+        for step in tqdm(range(num_iter)):
+
+            with tf.GradientTape() as tape:
+                self.generate_SPAM()
+                loss1 = tf.reduce_mean(tf.abs(self.init - init_target)**2)
+                loss2 = tf.reduce_mean(tf.abs(self.povm - povm_target)**2)
+                loss = loss1 + loss2
+
+            grads = tape.gradient(loss, self.parameter_list)
+            self.optimizer.apply_gradients(zip(grads, self.parameter_list))
+            print(step, np.abs(loss.numpy()))
+
+        self.generate_SPAM()
+        for var in self.optimizer.variables():
+            var.assign(tf.zeros_like(var))
