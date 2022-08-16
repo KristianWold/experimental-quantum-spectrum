@@ -47,8 +47,6 @@ class ModelQuantumMap:
         indices = tf.range(targets.shape[0])
 
         for step in tqdm(range(num_iter)):
-
-
             batch = tf.random.shuffle(indices)[:N]
             inputs_batch = [tf.gather(data, batch, axis=0) for data in inputs]
             targets_batch = tf.gather(targets, batch, axis=0)

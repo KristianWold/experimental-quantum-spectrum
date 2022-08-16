@@ -124,3 +124,4 @@ def variational_circuit(n):
     #    circuit.crx(angle, (n-i)%n, n-i-1)
 
     return circuit
+
