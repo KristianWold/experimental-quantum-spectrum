@@ -136,6 +136,23 @@ def generate_pauli_circuits(n = None,
     return input_list, circuit_list
 
 
+def generate_pauliInput_circuits(n = None):
+    input_list = []
+    circuit_list = []
+    for i in range(6**n):
+
+        config = numberToBase(i, 6, n)
+        U_prep = prepare_input(config, return_mode = "unitary")
+        circuit = prepare_input(config, return_mode = "circuit_measure")
+
+        input_list.append(U_prep)
+        circuit_list.append(circuit)
+
+    input_list = tf.convert_to_tensor(input_list, dtype=precision)
+
+    return input_list, circuit_list
+
+
 def generate_bitstring_circuits(n):
     circuit_list = []
     for i in range(2**n):
@@ -189,16 +206,14 @@ def corr_mat_to_povm(corr_mat):
     return povm
 
 
-def init_ideal(n):
-    d = 2**n
+def init_ideal(d):
     init = np.zeros((d,d))
     init[0, 0] = 1
     init = tf.convert_to_tensor(init, dtype = precision)
     return init
 
 
-def povm_ideal(n):
-    d = 2**n
+def povm_ideal(d):
     povm = corr_mat_to_povm(np.eye(d))
     return povm
 

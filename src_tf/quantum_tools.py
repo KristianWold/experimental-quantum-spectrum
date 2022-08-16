@@ -83,7 +83,9 @@ def generate_state(d, rank):
     return state
 
 
-def generate_unitary(G):
+def generate_unitary(d=None, G=None):
+    if G is None:
+        G, _, _ = generate_ginibre(d, d)
     Q, R = tf.linalg.qr(G, full_matrices = False)
     D = tf.linalg.tensor_diag_part(R)
     D = tf.math.sign(D)
