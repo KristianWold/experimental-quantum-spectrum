@@ -42,7 +42,6 @@ def prepare_input(config, return_mode = "density"):
         circuit.measure(circuit.qregs[0], circuit.cregs[0])
         state = circuit.reverse_bits()
 
-
     return state
 
 
@@ -282,11 +281,11 @@ class SPAM:
         self.use_corr_mat = use_corr_mat
 
         self.parameter_list = []
-        if init is "random":
+        if init == "random":
             self.A = tf.Variable(tf.cast(tf.random.normal((d, d), 0, 1), dtype = precision))
             self.B = tf.Variable(tf.cast(tf.random.normal((d, d), 0, 1), dtype = precision))
             self.parameter_list.extend([self.A, self.B])
-        elif init is "ideal":
+        elif init == "ideal":
             self.A = np.zeros((d,d))
             self.A[0,0] = 1
             self.A = tf.Variable(tf.cast(self.A, dtype = precision))
@@ -296,7 +295,7 @@ class SPAM:
             self.A = self.B = None
             self.init = init
 
-        if povm is "random":
+        if povm == "random":
             if not use_corr_mat:
                 self.C = tf.Variable(tf.cast(tf.random.normal((d, d, d), 0, 1), dtype = precision))
                 self.D = tf.Variable(tf.cast(tf.random.normal((d, d, d), 0, 1), dtype = precision))
@@ -304,7 +303,7 @@ class SPAM:
             else:
                 self.C =  tf.Variable(tf.cast(tf.random.normal((d, d), 0, 1), dtype = precision))
                 self.parameter_list.extend([self.C])
-        elif povm is "ideal":
+        elif povm == "ideal":
             if not use_corr_mat:
                 self.C = np.zeros((d,d,d))
                 for i in range(d):
