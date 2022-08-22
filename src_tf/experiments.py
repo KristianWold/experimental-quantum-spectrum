@@ -273,8 +273,8 @@ def variational_circuit(n):
 class SPAM:
     def __init__(self,
                  d=None,
-                 init = None,
-                 povm = None,
+                 init = "random",
+                 povm = "random",
                  use_corr_mat = False,
                  optimizer = None):
 
@@ -282,15 +282,21 @@ class SPAM:
         self.use_corr_mat = use_corr_mat
 
         self.parameter_list = []
-        if init is None:
-            self.A =  tf.Variable(tf.cast(tf.random.normal((d, d), 0, 1), dtype = precision))
-            self.B =  tf.Variable(tf.cast(tf.random.normal((d, d), 0, 1), dtype = precision))
+        if init is "random":
+            self.A = tf.Variable(tf.cast(tf.random.normal((d, d), 0, 1), dtype = precision))
+            self.B = tf.Variable(tf.cast(tf.random.normal((d, d), 0, 1), dtype = precision))
+            self.parameter_list.extend([self.A, self.B])
+        elif init is "ideal":
+            self.A = np.zeros((d,d))
+            self.A[0,0] = 1
+            self.A = tf.Variable(tf.cast(self.A, dtype = precision))
+            self.B = tf.Variable(tf.zeros_like(self.A, dtype = precision))
             self.parameter_list.extend([self.A, self.B])
         else:
             self.A = self.B = None
             self.init = init
 
-        if povm is None:
+        if povm is "random":
             if not use_corr_mat:
                 self.C = tf.Variable(tf.cast(tf.random.normal((d, d, d), 0, 1), dtype = precision))
                 self.D = tf.Variable(tf.cast(tf.random.normal((d, d, d), 0, 1), dtype = precision))
@@ -298,6 +304,18 @@ class SPAM:
             else:
                 self.C =  tf.Variable(tf.cast(tf.random.normal((d, d), 0, 1), dtype = precision))
                 self.parameter_list.extend([self.C])
+        elif povm is "ideal":
+            if not use_corr_mat:
+                self.C = np.zeros((d,d,d))
+                for i in range(d):
+                    self.C[i,i,i] = 1
+                self.C = tf.Variable(tf.cast(self.C, dtype = precision))
+                self.D = tf.Variable(tf.zeros_like(self.C, dtype = precision))
+                self.parameter_list.extend([self.C, self.D])
+            else:
+                self.C =  tf.Variable(tf.cast(tf.eye(d), dtype = precision))
+                self.parameter_list.extend([self.C])
+
         else:
             self.C = self.D = None
             self.povm = povm
@@ -326,7 +344,9 @@ class SPAM:
                 corr_mat = tf.transpose(X)
                 self.povm = corr_mat_to_povm(corr_mat)
 
-    def train(self, num_iter, inputs, targets, N = 1):
+    def train(self, num_iter, inputs, targets, N = None, verbose = True):
+        if N is None:
+            N = targets.shape[0]
         indices = tf.range(targets.shape[0])
 
         for step in tqdm(range(num_iter)):
@@ -345,11 +365,12 @@ class SPAM:
 
             grads = tape.gradient(loss, self.parameter_list)
             self.optimizer.apply_gradients(zip(grads, self.parameter_list))
-            print(step, np.abs(loss.numpy()))
+            if verbose:
+                print(step, np.abs(loss.numpy()))
 
         self.generate_SPAM()
 
-    def pretrain(self, num_iter, targets):
+    def pretrain(self, num_iter, targets, verbose = True):
         init_target, povm_target = targets
         for step in tqdm(range(num_iter)):
 
@@ -361,7 +382,8 @@ class SPAM:
 
             grads = tape.gradient(loss, self.parameter_list)
             self.optimizer.apply_gradients(zip(grads, self.parameter_list))
-            print(step, np.abs(loss.numpy()))
+            if verbose:
+                print(step, np.abs(loss.numpy()))
 
         self.generate_SPAM()
         for var in self.optimizer.variables():
