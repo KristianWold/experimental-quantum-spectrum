@@ -281,11 +281,11 @@ class SPAM:
         self.use_corr_mat = use_corr_mat
 
         self.parameter_list = []
-        if init == "random":
+        if init is "random":
             self.A = tf.Variable(tf.cast(tf.random.normal((d, d), 0, 1), dtype = precision))
             self.B = tf.Variable(tf.cast(tf.random.normal((d, d), 0, 1), dtype = precision))
             self.parameter_list.extend([self.A, self.B])
-        elif init == "ideal":
+        elif init is "ideal":
             self.A = np.zeros((d,d))
             self.A[0,0] = 1
             self.A = tf.Variable(tf.cast(self.A, dtype = precision))
@@ -295,7 +295,7 @@ class SPAM:
             self.A = self.B = None
             self.init = init
 
-        if povm == "random":
+        if povm is "random":
             if not use_corr_mat:
                 self.C = tf.Variable(tf.cast(tf.random.normal((d, d, d), 0, 1), dtype = precision))
                 self.D = tf.Variable(tf.cast(tf.random.normal((d, d, d), 0, 1), dtype = precision))
@@ -303,7 +303,7 @@ class SPAM:
             else:
                 self.C =  tf.Variable(tf.cast(tf.random.normal((d, d), 0, 1), dtype = precision))
                 self.parameter_list.extend([self.C])
-        elif povm == "ideal":
+        elif povm is "ideal":
             if not use_corr_mat:
                 self.C = np.zeros((d,d,d))
                 for i in range(d):
