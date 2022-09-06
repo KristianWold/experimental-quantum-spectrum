@@ -27,12 +27,12 @@ def reshuffle_choi(choi):
 
 def kraus_to_choi(kraus_map, reshuffle = True):
     kraus = kraus_map.kraus
-    rank = kraus.shape[0]
+    rank = kraus.shape[1]
     choi = 0
 
     for i in range(rank):
         K = kraus[0, i]
-        choi = choi + tf.experimental.numpy.kron(tf.linalg.adjoint(K), K)
+        choi = choi + tf.experimental.numpy.kron(K, tf.linalg.adjoint(K))
 
     if reshuffle:
         choi = reshuffle_choi(choi)
@@ -40,7 +40,7 @@ def kraus_to_choi(kraus_map, reshuffle = True):
     return choi
 
 
-def choi_spectrum(choi):
+def choi_spectrum(choi, resuffle=True):
     choi = reshuffle_choi(choi)
     eig, _ = tf.linalg.eig(choi)
 

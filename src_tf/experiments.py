@@ -267,8 +267,6 @@ def variational_circuit(n):
     return circuit
 
 
-
-
 class SPAM:
     def __init__(self,
                  d=None,
@@ -324,20 +322,26 @@ class SPAM:
 
     def generate_SPAM(self):
         if self.A is not None:
-            X = self.A + 1j*self.B
-            XX = tf.matmul(X, X, adjoint_b=True)
-            state = XX/tf.linalg.trace(XX)
-            self.init = state
+            self.generate_init()
 
         if self.C is not None:
-            if not self.use_corr_mat:
+            self.generate_POVM()
+
+    def generate_init(self):
+        X = self.A + 1j*self.B
+        XX = tf.matmul(X, X, adjoint_b=True)
+        state = XX/tf.linalg.trace(XX)
+        self.init = state
+
+    def generate_POVM(self):
+        if not self.use_corr_mat:
                 X = self.C + 1j*self.D
                 XX = tf.matmul(X, X, adjoint_b=True)
                 D = tf.math.reduce_sum(XX, axis = 0)
                 invsqrtD = tf.linalg.inv(tf.linalg.sqrtm(D))
                 self.povm = tf.matmul(tf.matmul(invsqrtD, XX), invsqrtD)
-
-            else:
+        
+        else:
                 X = tf.abs(self.C)
                 X = X/tf.reduce_sum(X, axis = 1)
                 corr_mat = tf.transpose(X)
