@@ -41,10 +41,12 @@ class ModelQuantumMap:
               inputs_val = None,
               targets_val = None,
               num_iter = 1000,
-              N = 1,
+              N = None,
               verbose = True):
-
+        
         indices = tf.range(targets.shape[0])
+        if N is None:
+            N = targets.shape[0]
 
         for step in tqdm(range(num_iter)):
             batch = tf.random.shuffle(indices)[:N]

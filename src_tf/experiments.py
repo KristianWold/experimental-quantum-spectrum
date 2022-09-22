@@ -249,24 +249,6 @@ def parity_observable(n, trace_index_list=[]):
     return observable
 
 
-def variational_circuit(n):
-    theta = np.random.uniform(-np.pi, np.pi, 2*n)
-    circuit = qk.QuantumCircuit(n)
-    for i, angle in enumerate(theta[:n]):
-        circuit.ry(angle, i)
-
-    for i in range(n-1):
-        circuit.cnot(i, i+1)
-
-    for i, angle in enumerate(theta[n:2*n]):
-        circuit.rx(angle, i)
-
-    for i in reversed(range(n-1)):
-        circuit.cnot(i+1, i)
-
-    return circuit
-
-
 class SPAM:
     def __init__(self,
                  d=None,
