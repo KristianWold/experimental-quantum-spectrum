@@ -30,7 +30,8 @@ class ModelQuantumMap:
         self.q_map = q_map
         self.loss = loss
         self.optimizer = optimizer
-        self.loss_list = []
+        self.loss_train = []
+        self.loss_val = []
         self.c_list = []
 
 
@@ -66,17 +67,21 @@ class ModelQuantumMap:
             elif len(targets_val) == 1:
                 loss = channel_fidelity(self.q_map, targets_val[0])
 
-
-            self.loss_list.append(np.abs(loss.numpy()))
-            if self.q_map.c is not None:
-                self.c_list.append(np.abs(self.q_map.c.numpy()))
             if inputs_val is None:
                 loss_val = 0
             else:
                 loss_val = np.abs(self.loss(self.q_map, inputs_val, targets_val).numpy())
+
+            self.loss_train.append(np.abs(loss.numpy()))
+            self.loss_val.append(loss_val)
+
+            if self.q_map.c is not None:
+                self.c_list.append(np.abs(self.q_map.c.numpy()))
+            
             if verbose:
                 print(f"Step:{step}, train: {np.abs(loss.numpy()):.5f}, val: {loss_val:.5f}")
-
+            
+        print(np.abs(loss.numpy()), loss_val)
         self.q_map.generate_map()
 
 

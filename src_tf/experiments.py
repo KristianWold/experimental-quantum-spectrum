@@ -352,6 +352,7 @@ class SPAM:
             self.optimizer.apply_gradients(zip(grads, self.parameter_list))
             if verbose:
                 print(step, np.abs(loss.numpy()))
+        print(np.abs(loss.numpy()))
 
         self.generate_SPAM()
 
@@ -370,6 +371,7 @@ class SPAM:
             if verbose:
                 print(step, np.abs(loss.numpy()))
 
+        print(np.abs(loss.numpy()))
         self.generate_SPAM()
         for var in self.optimizer.variables():
             var.assign(tf.zeros_like(var))
