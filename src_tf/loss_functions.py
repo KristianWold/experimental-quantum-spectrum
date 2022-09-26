@@ -53,6 +53,28 @@ def channel_fidelity_loss(q_map, input, target, grad=False):
 
 class SpectrumDistance():
 
+    def __init__(self, sigma = 0.1):
+        self.num_iter = num_iter
+        self.sigma = sigma
+
+    def __call__(self, q_map, input, target, grad=False):
+        choi_model = maps_to_choi([q_map])
+
+        q_map_target = input
+        choi_target = maps_to_choi([q_map_target])
+
+        sigma
+
+        spectrum_model = [np.array((a,b)) for a,b in zip(*choi_spectrum(choi_model))]
+        spectrum_target = [np.array((a,b)) for a,b in zip(*choi_spectrum(choi_target))]
+
+        
+
+        return loss
+
+"""
+class SpectrumDistance():
+
     def __init__(self, num_iter = 1000, T = 0):
         self.num_iter = num_iter
         self.T = T
@@ -82,7 +104,7 @@ class SpectrumDistance():
         loss = distance_list[-1]
 
         return loss
-
+"""
 
 def greedy_pair_distance(a_list, b_list):
     connections = []
