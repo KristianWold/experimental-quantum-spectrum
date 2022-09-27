@@ -43,16 +43,22 @@ class ModelQuantumMap:
               targets_val = None,
               num_iter = 1000,
               N = None,
-              verbose = True):
-        
-        indices = tf.range(targets.shape[0])
+              verbose = True,
+              use_batch = True):
+
+        if use_batch:
+            indices = tf.range(targets.shape[0])
         if N is None:
             N = targets.shape[0]
 
         for step in tqdm(range(num_iter)):
-            batch = tf.random.shuffle(indices)[:N]
-            inputs_batch = [tf.gather(data, batch, axis=0) for data in inputs]
-            targets_batch = tf.gather(targets, batch, axis=0)
+            if use_batch:
+                batch = tf.random.shuffle(indices)[:N]
+                inputs_batch = [tf.gather(data, batch, axis=0) for data in inputs]
+                targets_batch = tf.gather(targets, batch, axis=0)
+            else:
+                inputs_batch = inputs
+                targets_batch = targets
 
             with tf.GradientTape(watch_accessed_variables=False) as tape:
                 tape.watch(self.q_map.parameter_list)
@@ -83,6 +89,11 @@ class ModelQuantumMap:
             
         print(np.abs(loss.numpy()), loss_val)
         self.q_map.generate_map()
+    
+    def zero_optimizer(self):
+        for var in self.optimizer.variables():
+            var.assign(tf.zeros_like(var))
+
 
 
 class POVM:

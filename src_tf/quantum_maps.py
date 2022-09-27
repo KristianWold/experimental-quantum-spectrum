@@ -29,6 +29,7 @@ def kraus_to_choi(kraus_map, reshuffle = True):
     kraus = kraus_map.kraus
     rank = kraus.shape[1]
     choi = 0
+    print(kraus.shape)
 
     for i in range(rank):
         K = kraus[0, i]
@@ -40,14 +41,34 @@ def kraus_to_choi(kraus_map, reshuffle = True):
     return choi
 
 
+def maps_to_choi(map_list):
+    d = map_list[0].d
+    choi = tf.zeros((d**2, d**2), dtype=precision)
+    M = np.zeros((d**2, d, d))
+    for i in range(d):
+        for j in range(d):
+
+            M[d*i + j, i, j] = 1
+
+    M = tf.convert_to_tensor(M, dtype=precision)
+    M_prime = tf.identity(M)
+    for map in map_list:
+        M_prime = map.apply_map(M_prime)
+    for i in range(d**2):
+        choi += tf.experimental.numpy.kron(M_prime[i], M[i])
+
+    return choi
+
+
+
 def choi_spectrum(choi, resuffle=True):
     choi = reshuffle_choi(choi)
     eig, _ = tf.linalg.eig(choi)
 
-    x = np.real(eig)
-    y = np.imag(eig)
+    x = tf.cast(tf.math.real(eig), dtype=precision)
+    y = tf.cast(tf.math.imag(eig), dtype=precision)
 
-    return np.array([x, y])
+    return [x, y]
 
 
 def choi_steady_state(choi):

@@ -14,6 +14,7 @@ from quantum_tools import *
 from utils import *
 from experiments import *
 from set_precision import *
+from quantum_maps import *
 
 
 def state_density_loss(q_map, input, target, grad=False):
@@ -54,23 +55,36 @@ def channel_fidelity_loss(q_map, input, target, grad=False):
 class SpectrumDistance():
 
     def __init__(self, sigma = 0.1):
-        self.num_iter = num_iter
         self.sigma = sigma
+        self.mode = "density"
 
     def __call__(self, q_map, input, target, grad=False):
+        spectrum_target = input[0]
+
         choi_model = maps_to_choi([q_map])
-
-        q_map_target = input
-        choi_target = maps_to_choi([q_map_target])
-
-        sigma
-
-        spectrum_model = [np.array((a,b)) for a,b in zip(*choi_spectrum(choi_model))]
-        spectrum_target = [np.array((a,b)) for a,b in zip(*choi_spectrum(choi_target))]
-
+        spectrum_model = [(a,b) for a,b in zip(*choi_spectrum(choi_model))]
         
 
+        if self.mode == "density":
+            loss = self.overlap(spectrum_model, spectrum_model)
+            loss += -2*self.overlap(spectrum_model, spectrum_target)
+
+        if self.mode == "pairwise":
+            connections = greedy_pair_distance(spectrum_model, spectrum_target)
+            loss = pair_distance(spectrum_model, spectrum_target, connections)
+
         return loss
+
+    def overlap(self, spectrum_a, spectrum_b):
+        ab = 0
+        for a in spectrum_a:
+            for b in spectrum_b:
+                expo = (a[0] - b[0])**2 + (a[1] - b[1])**2
+                ab += tf.math.exp(-expo/self.sigma**2)
+
+        return ab/self.sigma
+        
+           
 
 """
 class SpectrumDistance():
@@ -106,15 +120,15 @@ class SpectrumDistance():
         return loss
 """
 
-def greedy_pair_distance(a_list, b_list):
+def greedy_pair_distance(spectrum_a, spectrum_b):
     connections = []
-    not_connected = len(a_list)*[True]
+    not_connected = len(spectrum_a)*[True]
 
-    for i, a in enumerate(a_list):
+    for i, a in enumerate(spectrum_a):
         min_dist = float("inf")
         idx = 0
-        for j, b in enumerate(b_list):
-            dist = np.linalg.norm(a - b)
+        for j, b in enumerate(spectrum_b):
+            dist = (a[0] - b[0])**2 + (a[1] - b[1])**2
             if (dist < min_dist) and not_connected[j]:
 
                 min_dist = dist
@@ -126,12 +140,12 @@ def greedy_pair_distance(a_list, b_list):
     return connections
 
 
-def pair_distance(a_list,
-                  b_list,
+def pair_distance(spectrum_a,
+                  spectrum_b,
                   connections):
     distance = 0
     for i, idx in enumerate(connections):
-        distance += np.linalg.norm(a_list[i] - b_list[idx])
+        distance += (spectrum_a[i][0] - spectrum_b[idx][0])**2 + (spectrum_a[i][1] - spectrum_b[idx][1])**2
 
     return distance
 
