@@ -62,7 +62,7 @@ class SpectrumDistance():
         spectrum_target = input[0]
 
         choi_model = maps_to_choi([q_map])
-        spectrum_model = [(a,b) for a,b in zip(*choi_spectrum(choi_model))]
+        spectrum_model = choi_spectrum(choi_model, real=True)
         
 
         if self.mode == "density":
@@ -76,13 +76,14 @@ class SpectrumDistance():
         return loss
 
     def overlap(self, spectrum_a, spectrum_b):
-        ab = 0
-        for a in spectrum_a:
-            for b in spectrum_b:
-                expo = (a[0] - b[0])**2 + (a[1] - b[1])**2
-                ab += tf.math.exp(-expo/self.sigma**2)
+        aa = tf.math.reduce_sum(spectrum_a*spectrum_a, axis=1, keepdims=True)
+        bb = tf.math.reduce_sum(spectrum_b*spectrum_b, axis=1, keepdims=True)
+        ab = tf.matmul(spectrum_a, spectrum_b, adjoint_b=True)
 
-        return ab/self.sigma
+        expo = aa - 2*ab + tf.transpose(bb)
+        sum = tf.math.reduce_sum(tf.math.exp(-expo/self.sigma**2))
+        
+        return sum
         
            
 

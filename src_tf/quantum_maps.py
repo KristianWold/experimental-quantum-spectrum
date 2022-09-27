@@ -60,23 +60,27 @@ def maps_to_choi(map_list):
     return choi
 
 
-
-def choi_spectrum(choi, resuffle=True):
+def choi_spectrum(choi, resuffle=True, real=True):
     choi = reshuffle_choi(choi)
     eig, _ = tf.linalg.eig(choi)
+    eig = tf.expand_dims(eig, axis=1)
+    
+    if real:
+        x = tf.cast(tf.math.real(eig), dtype=precision)
+        y = tf.cast(tf.math.imag(eig), dtype=precision)
+        eig = tf.concat([x, y], axis=1)
 
-    x = tf.cast(tf.math.real(eig), dtype=precision)
-    y = tf.cast(tf.math.imag(eig), dtype=precision)
-
-    return [x, y]
+    return eig
 
 
 def choi_steady_state(choi):
     d = int(np.sqrt(choi.shape[0]))
     choi = reshuffle_choi(choi)
-    _, eig_vec = np.linalg.eig(choi)
+    eig, eig_vec = np.linalg.eig(choi)
 
-    steady_state = eig_vec[:,0]
+    steady_index = (tf.abs(eig) > 1 - 1e-5)
+
+    steady_state = eig_vec[:, steady_index]
     steady_state = steady_state.reshape(d, d)
 
     return steady_state
