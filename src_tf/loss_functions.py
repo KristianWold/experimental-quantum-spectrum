@@ -63,10 +63,10 @@ class SpectrumDistance():
 
         choi_model = maps_to_choi([q_map])
         spectrum_model = choi_spectrum(choi_model, real=True)
-        
 
         if self.mode == "density":
             loss = self.overlap(spectrum_model, spectrum_model)
+            loss += self.overlap(spectrum_target, spectrum_target)
             loss += -2*self.overlap(spectrum_model, spectrum_target)
 
         if self.mode == "pairwise":
@@ -84,71 +84,41 @@ class SpectrumDistance():
         sum = tf.math.reduce_sum(tf.math.exp(-expo/self.sigma**2))
         
         return sum
+
+    def overlap_alt(self, spectrum_a, spectrum_b):
+        sum = 0
+        for a in spectrum_a:
+            for b in spectrum_b:
+                expo = (a[0] - b[0])**2 + (a[1] - b[1])**2
+                sum += tf.math.exp(-expo/self.sigma**2)
         
-           
+        return sum    
+ 
+    def greedy_pair_distance(self, spectrum_a, spectrum_b):
+        connections = []
+        not_connected = len(spectrum_a)*[True]
 
-"""
-class SpectrumDistance():
+        for i, a in enumerate(spectrum_a):
+            min_dist = float("inf")
+            idx = 0
+            for j, b in enumerate(spectrum_b):
+                dist = tf.abs((a[0] - b[0])**2 + (a[1] - b[1])**2)
+                if (dist < min_dist) and not_connected[j]:
 
-    def __init__(self, num_iter = 1000, T = 0):
-        self.num_iter = num_iter
-        self.T = T
-        self.connections = None
+                    min_dist = dist
+                    idx = j
 
-    def __call__(self, q_map, input, target, grad=False):
-        choi_model = maps_to_choi([q_map])
+            not_connected[idx] = False
+            connections.append(idx)
 
-        q_map_target = input
-        choi_target = maps_to_choi([q_map_target])
+        return connections
 
-        spectrum_model = [np.array((a,b)) for a,b in zip(*choi_spectrum(choi_model))]
-        spectrum_target = [np.array((a,b)) for a,b in zip(*choi_spectrum(choi_target))]
+    def pair_distance(self, spectrum_a, spectrum_b, connections):
+        distance = 0
+        for i, idx in enumerate(connections):
+            distance += (spectrum_a[i][0] - spectrum_b[idx][0])**2 + (spectrum_a[i][1] - spectrum_b[idx][1])**2
 
-        if grad:
-            num_iter = 0
-        else:
-            self.connections = greedy_pair_distance(spectrum_model, spectrum_target)
-            num_iter = self.num_iter
-
-        self.connections, distance_list = min_pair_distance(spectrum_model,
-                                                            spectrum_target,
-                                                            self.connections,
-                                                            num_iter = num_iter,
-                                                            T = self.T)
-
-        loss = distance_list[-1]
-
-        return loss
-"""
-
-def greedy_pair_distance(spectrum_a, spectrum_b):
-    connections = []
-    not_connected = len(spectrum_a)*[True]
-
-    for i, a in enumerate(spectrum_a):
-        min_dist = float("inf")
-        idx = 0
-        for j, b in enumerate(spectrum_b):
-            dist = (a[0] - b[0])**2 + (a[1] - b[1])**2
-            if (dist < min_dist) and not_connected[j]:
-
-                min_dist = dist
-                idx = j
-
-        not_connected[idx] = False
-        connections.append(idx)
-
-    return connections
-
-
-def pair_distance(spectrum_a,
-                  spectrum_b,
-                  connections):
-    distance = 0
-    for i, idx in enumerate(connections):
-        distance += (spectrum_a[i][0] - spectrum_b[idx][0])**2 + (spectrum_a[i][1] - spectrum_b[idx][1])**2
-
-    return distance
+        return distance
 
 
 def min_pair_distance(a_list = None,

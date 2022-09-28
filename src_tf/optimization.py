@@ -66,12 +66,15 @@ class ModelQuantumMap:
                 loss = self.loss(self.q_map, inputs_batch, targets_batch)
 
             grads = tape.gradient(loss, self.q_map.parameter_list)
+            #for i in range(len(grads)):
+            #    grads[i] = grads[i] + tf.cast(tf.random.normal(grads[i].shape, 0, 0.01), dtype = precision) 
+        
             self.optimizer.apply_gradients(zip(grads, self.q_map.parameter_list))
 
             if targets_val is None:
                 pass
             elif len(targets_val) == 1:
-                loss = channel_fidelity(self.q_map, targets_val[0])
+                loss_val = channel_fidelity(self.q_map, targets_val[0])
 
             if inputs_val is None:
                 loss_val = 0
