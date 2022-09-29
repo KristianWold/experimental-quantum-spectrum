@@ -19,7 +19,7 @@ from set_precision import *
 def reshuffle_choi(choi):
     d = int(np.sqrt(choi.shape[0]))
     choi = tf.reshape(choi, (d,d,d,d))
-    choi = tf.transpose(choi, perm = [0,2,1,3])
+    choi = tf.einsum("jklm -> jlkm", choi)
     choi = tf.reshape(choi, (d**2,d**2))
 
     return choi
@@ -29,11 +29,10 @@ def kraus_to_choi(kraus_map, reshuffle = True):
     kraus = kraus_map.kraus
     rank = kraus.shape[1]
     choi = 0
-    print(kraus.shape)
 
     for i in range(rank):
         K = kraus[0, i]
-        choi = choi + tf.experimental.numpy.kron(K, tf.linalg.adjoint(K))
+        choi = choi + tf.experimental.numpy.kron(K, tf.math.conj(K))
 
     if reshuffle:
         choi = reshuffle_choi(choi)
@@ -73,12 +72,25 @@ def choi_spectrum(choi, resuffle=True, real=True):
     return eig
 
 
+def normalize_spectrum(spectrum):
+    spectrum = spectrum.numpy()
+    idx = np.argmax(np.linalg.norm(spectrum, axis=1))
+    spectrum[idx] = (0,0)
+
+    max = np.max(np.linalg.norm(spectrum, axis=1))
+    print(max)
+    spectrum = 1/max*spectrum
+
+    spectrum[idx] = (1,0)
+    spectrum = tf.cast(tf.convert_to_tensor(spectrum), dtype=precision)
+
+    return spectrum
+
 def choi_steady_state(choi):
     d = int(np.sqrt(choi.shape[0]))
     choi = reshuffle_choi(choi)
     eig, eig_vec = np.linalg.eig(choi)
-
-    steady_index = (tf.abs(eig) > 1 - 1e-5)
+    steady_index = tf.math.argmax(tf.abs(eig))
 
     steady_state = eig_vec[:, steady_index]
     steady_state = steady_state.reshape(d, d)

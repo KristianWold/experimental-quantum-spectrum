@@ -54,24 +54,30 @@ def channel_fidelity_loss(q_map, input, target, grad=False):
 
 class SpectrumDistance():
 
-    def __init__(self, sigma = 0.1):
+    def __init__(self, sigma = 0.1, k = 1000):
         self.sigma = sigma
+        self.sigma_ = sigma
+        self.k = k
         self.mode = "density"
+        self.t = 0
 
     def __call__(self, q_map, input, target, grad=False):
         spectrum_target = input[0]
 
-        choi_model = maps_to_choi([q_map])
+        choi_model = kraus_to_choi(q_map)
         spectrum_model = choi_spectrum(choi_model, real=True)
 
         if self.mode == "density":
             loss = self.overlap(spectrum_model, spectrum_model)
-            loss += self.overlap(spectrum_target, spectrum_target)
             loss += -2*self.overlap(spectrum_model, spectrum_target)
+            loss += self.overlap(spectrum_target, spectrum_target)
 
         if self.mode == "pairwise":
             connections = greedy_pair_distance(spectrum_model, spectrum_target)
             loss = pair_distance(spectrum_model, spectrum_target, connections)
+        
+        self.t += 1
+        self.sigma = np.sqrt(self.k)*self.sigma_/np.sqrt(self.k + self.t)
 
         return loss
 
@@ -81,7 +87,7 @@ class SpectrumDistance():
         ab = tf.matmul(spectrum_a, spectrum_b, adjoint_b=True)
 
         expo = aa - 2*ab + tf.transpose(bb)
-        sum = tf.math.reduce_sum(tf.math.exp(-expo/self.sigma**2))
+        sum = 1/np.sqrt(self.sigma)*tf.math.reduce_mean(tf.math.exp(-expo/self.sigma**2))
         
         return sum
 

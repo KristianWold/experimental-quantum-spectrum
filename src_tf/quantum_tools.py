@@ -40,25 +40,6 @@ def channel_fidelity(map_A, map_B):
     return fidelity
 
 
-def maps_to_choi(map_list):
-    d = map_list[0].d
-    choi = tf.zeros((d**2, d**2), dtype=precision)
-    M = np.zeros((d**2, d, d))
-    for i in range(d):
-        for j in range(d):
-
-            M[d*i + j, i, j] = 1
-
-    M = tf.convert_to_tensor(M, dtype=precision)
-    M_prime = tf.identity(M)
-    for map in map_list:
-        M_prime = map.apply_map(M_prime)
-    for i in range(d**2):
-        choi += tf.experimental.numpy.kron(M_prime[i], M[i])
-
-    return choi
-
-
 def expectation_value(probs, observable):
     ev = tf.abs(tf.reduce_sum(probs*observable, axis = 1))
     return ev
