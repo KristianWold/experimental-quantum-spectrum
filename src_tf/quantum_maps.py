@@ -40,6 +40,17 @@ def kraus_to_choi(kraus_map, reshuffle = True):
     return choi
 
 
+
+def effective_rank(q_map):
+    choi = kraus_to_choi(q_map)
+    eig, _ = tf.linalg.eig(choi)
+    purity = tf.math.reduce_sum(eig**2)
+    d2 = choi.shape[0]
+    
+    rank_eff = d2/purity
+    return rank_eff
+
+
 def maps_to_choi(map_list):
     d = map_list[0].d
     choi = tf.zeros((d**2, d**2), dtype=precision)
@@ -57,6 +68,15 @@ def maps_to_choi(map_list):
         choi += tf.experimental.numpy.kron(M_prime[i], M[i])
 
     return choi
+
+
+def channel_fidelity(map_A, map_B):
+    choi_A = maps_to_choi([map_A])
+    choi_B = maps_to_choi([map_B])
+    d_squared = choi_A.shape[0]
+    fidelity = state_fidelity(choi_A, choi_B)/d_squared
+
+    return fidelity
 
 
 def choi_spectrum(choi, resuffle=True, real=True):

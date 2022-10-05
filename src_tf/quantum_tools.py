@@ -31,15 +31,6 @@ def state_fidelity(A, B):
     return tf.abs(fidelity)**2
 
 
-def channel_fidelity(map_A, map_B):
-    choi_A = maps_to_choi([map_A])
-    choi_B = maps_to_choi([map_B])
-    d_squared = choi_A.shape[0]
-    fidelity = state_fidelity(choi_A, choi_B)/d_squared
-
-    return fidelity
-
-
 def expectation_value(probs, observable):
     ev = tf.abs(tf.reduce_sum(probs*observable, axis = 1))
     return ev
@@ -81,6 +72,34 @@ def circuit_to_matrix(circuit):
     U = tf.convert_to_tensor(U, dtype = precision)
 
     return U
+
+
+def maps_to_choi(map_list):
+    d = map_list[0].d
+    choi = tf.zeros((d**2, d**2), dtype=precision)
+    M = np.zeros((d**2, d, d))
+    for i in range(d):
+        for j in range(d):
+
+            M[d*i + j, i, j] = 1
+
+    M = tf.convert_to_tensor(M, dtype=precision)
+    M_prime = tf.identity(M)
+    for map in map_list:
+        M_prime = map.apply_map(M_prime)
+    for i in range(d**2):
+        choi += tf.experimental.numpy.kron(M_prime[i], M[i])
+
+    return choi
+
+
+def channel_fidelity(map_A, map_B):
+    choi_A = maps_to_choi([map_A])
+    choi_B = maps_to_choi([map_B])
+    d_squared = choi_A.shape[0]
+    fidelity = state_fidelity(choi_A, choi_B)/d_squared
+
+    return fidelity
 
 
 def apply_unitary(state, U):

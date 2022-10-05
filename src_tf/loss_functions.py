@@ -32,18 +32,26 @@ def expectation_value_loss(q_map, input, target, grad=False):
     return loss
 
 
-def probs_loss(q_map, input, target, grad=False):
-    N = target.shape[0]
-    d = q_map.spam.init.shape[0]
+class ProbabilityLoss:
+    def __init__(self, reg = 0):
+        self.reg = reg
 
-    U_prep, U_basis = input
+    def __call__(self, q_map, input, target):
+        N = target.shape[0]
+        d = q_map.spam.init.shape[0]
 
-    state = tf.repeat(tf.expand_dims(q_map.spam.init, axis=0), N, axis=0)
-    state = apply_unitary(state, U_prep)
-    state = q_map.apply_map(state)
-    output = measurement(state, U_basis, q_map.spam.povm)
-    loss = d**2*tf.math.reduce_mean((output - target)**2)
-    return loss
+        U_prep, U_basis = input
+
+        state = tf.repeat(tf.expand_dims(q_map.spam.init, axis=0), N, axis=0)
+        state = apply_unitary(state, U_prep)
+        state = q_map.apply_map(state)
+        output = measurement(state, U_basis, q_map.spam.povm)
+        loss = d**2*tf.math.reduce_mean((output - target)**2)
+        if self.reg != 0:
+            rank_eff = effective_rank(q_map)
+            loss += self.reg*rank_eff
+
+        return loss
 
 
 def channel_fidelity_loss(q_map, input, target, grad=False):
