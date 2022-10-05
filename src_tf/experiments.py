@@ -154,10 +154,9 @@ def generate_pauliInput_circuits(n = None):
 
 def add_noise_to_probs(tensor, sigma = 0.01):
     tensor = tensor*tf.cast(tf.random.normal(tensor.shape, 1, sigma), dtype = precision)
-    tensor = tensor/tf.math.reduce_sum(tensor, axis=1)
+    tensor = tensor/tf.math.reduce_sum(tensor, axis=1, keepdims=True)
 
     return tensor
-
 
 
 def generate_bitstring_circuits(n):

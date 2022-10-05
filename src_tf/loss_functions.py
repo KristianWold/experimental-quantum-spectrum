@@ -59,6 +59,14 @@ def channel_fidelity_loss(q_map, input, target, grad=False):
     loss = -channel_fidelity(q_map, q_map_target)
     return loss
 
+def channel_norm_loss(q_map, input, target, grad=False):
+    q_map_target = target
+    choi_model = kraus_to_choi(q_map)
+    choi_target = kraus_to_choi(q_map_target)
+
+    loss = tf.math.reduce_sum(tf.abs(choi_model - choi_target)**2)
+    return loss
+
 
 class SpectrumDistance():
 

@@ -48,8 +48,8 @@ class ModelQuantumMap:
 
         if use_batch:
             indices = tf.range(targets.shape[0])
-        if N is None:
-            N = targets.shape[0]
+            if N is None:
+                N = targets.shape[0]
 
         for step in tqdm(range(num_iter)):
             if use_batch:

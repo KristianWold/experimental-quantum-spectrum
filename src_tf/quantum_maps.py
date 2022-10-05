@@ -71,8 +71,8 @@ def maps_to_choi(map_list):
 
 
 def channel_fidelity(map_A, map_B):
-    choi_A = maps_to_choi([map_A])
-    choi_B = maps_to_choi([map_B])
+    choi_A = kraus_to_choi(map_A)
+    choi_B = kraus_to_choi(map_B)
     d_squared = choi_A.shape[0]
     fidelity = state_fidelity(choi_A, choi_B)/d_squared
 
