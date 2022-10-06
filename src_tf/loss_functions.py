@@ -49,7 +49,21 @@ class ProbabilityLoss:
         loss = d**2*tf.math.reduce_mean((output - target)**2)
         if self.reg != 0:
             rank_eff = effective_rank(q_map)
-            loss += self.reg*rank_eff
+            loss += self.reg*rank_eff/d**2
+        return loss
+
+
+class RankShrink:
+
+    def __init__(self, inflate=False):
+        if inflate:
+            self.sign = -1
+        else:
+            self.sign = 1
+
+    def __call__(self, q_map, input, target):
+        d = q_map.spam.init.shape[0]
+        loss = self.sign*effective_rank(q_map)/d**2
 
         return loss
 
@@ -58,6 +72,7 @@ def channel_fidelity_loss(q_map, input, target, grad=False):
     q_map_target = target
     loss = -channel_fidelity(q_map, q_map_target)
     return loss
+
 
 def channel_norm_loss(q_map, input, target, grad=False):
     q_map_target = target
@@ -104,15 +119,6 @@ class SpectrumDistance():
 
         expo = aa - 2*ab + tf.transpose(bb)
         sum = 1/np.sqrt(self.sigma)*tf.math.reduce_mean(tf.math.exp(-expo/self.sigma**2))
-        
-        return sum
-
-    def overlap_alt(self, spectrum_a, spectrum_b):
-        sum = 0
-        for a in spectrum_a:
-            for b in spectrum_b:
-                expo = (a[0] - b[0])**2 + (a[1] - b[1])**2
-                sum += tf.math.exp(-expo/self.sigma**2)
         
         return sum    
  
