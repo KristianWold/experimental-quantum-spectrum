@@ -40,9 +40,11 @@ def kraus_to_choi(kraus_map, reshuffle = True):
     return choi
 
 
-
 def effective_rank(q_map):
-    choi = kraus_to_choi(q_map)
+    if isinstance(q_map, KrausMap):
+        choi = kraus_to_choi(q_map)
+    else:
+        choi = q_map
     eig, _ = tf.linalg.eig(choi)
     purity = tf.math.reduce_sum(eig**2)
     d2 = choi.shape[0]

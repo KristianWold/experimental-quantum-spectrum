@@ -75,9 +75,6 @@ class ModelQuantumMap:
                 pass
             elif len(targets_val) == 1:
                 loss_val = channel_fidelity(self.q_map, targets_val[0])
-
-            if inputs_val is None:
-                loss_val = 0
             else:
                 loss_val = np.abs(self.loss(self.q_map, inputs_val, targets_val).numpy())
 

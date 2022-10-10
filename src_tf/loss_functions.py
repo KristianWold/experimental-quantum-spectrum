@@ -39,7 +39,6 @@ class ProbabilityLoss:
     def __call__(self, q_map, input, target):
         N = target.shape[0]
         d = q_map.spam.init.shape[0]
-
         U_prep, U_basis = input
 
         state = tf.repeat(tf.expand_dims(q_map.spam.init, axis=0), N, axis=0)
@@ -49,21 +48,29 @@ class ProbabilityLoss:
         loss = d**2*tf.math.reduce_mean((output - target)**2)
         if self.reg != 0:
             rank_eff = effective_rank(q_map)
-            loss += self.reg*rank_eff/d**2
+            loss += self.reg*rank_eff
         return loss
 
 
 class RankShrink:
 
-    def __init__(self, inflate=False):
+    def __init__(self, rank=None, inflate=False):
         if inflate:
             self.sign = -1
         else:
             self.sign = 1
 
+    def __call__(self, q_map, input, target):   
+        loss = self.sign*effective_rank(q_map)
+
+        return loss
+
+
+class RankMSE:
     def __call__(self, q_map, input, target):
-        d = q_map.spam.init.shape[0]
-        loss = self.sign*effective_rank(q_map)/d**2
+        
+        rank_target = target
+        loss = (effective_rank(q_map) - rank_target)**2
 
         return loss
 
