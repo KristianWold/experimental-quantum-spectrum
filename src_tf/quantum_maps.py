@@ -94,6 +94,17 @@ def choi_spectrum(choi, resuffle=True, real=True):
     return eig
 
 
+def kraus_spectrum(kraus):
+    rank = kraus.shape[1]
+    d = kraus.shape[2]
+    vectors = tf.reshape(kraus, (rank, d**2))
+    print(vectors.shape)
+    norm = tf.linalg.adjoint(vectors)*vectors
+    norm = tf.math.sqrt(tf.math.reduce_sum(norm, axis=1))
+    
+    return norm
+
+
 def normalize_spectrum(spectrum):
     spectrum = spectrum.numpy()
     idx = np.argmax(np.linalg.norm(spectrum, axis=1))

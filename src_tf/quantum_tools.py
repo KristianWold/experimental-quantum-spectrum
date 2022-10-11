@@ -108,20 +108,19 @@ def apply_unitary(state, U):
     return state
 
 
-def variational_circuit(n, L, a, b):
+def pqc_basic(n, L, a, b):
     theta_list = [np.random.uniform(-np.pi, np.pi, 2*n) for i in range(L)]
     circuit = qk.QuantumCircuit(n)
-    for theta in theta_list[a:b]:
-        for i, angle in enumerate(theta[:n]):
-            circuit.ry(angle, i)
-
-        for i, angle in enumerate(theta[n:]):
-            circuit.rz(angle, i)
-
+    for theta in theta_list:
         for i in range(n):
-            circuit.cnot(i, (i+1)%n)
+            circuit.ry(theta[i], i)
+            circuit.rz(theta[i+n], i)
 
+        for i in range(n-1):
+            circuit.cx(i, i+1)
+            
     return circuit
+    
 
 def pqc_expressive(n, L):
     theta_list = [np.random.uniform(0, 2*np.pi, 4*n) for i in range(L)]
