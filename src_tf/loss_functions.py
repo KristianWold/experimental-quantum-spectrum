@@ -17,7 +17,7 @@ from set_precision import *
 from quantum_maps import *
 
 
-def state_density_loss(q_map, input, target, grad=False):
+def state_fidelity_loss(q_map, input, target, grad=False):
     state = input
     output = q_map.apply_map(input)
     loss = -state_fidelity(output, target)

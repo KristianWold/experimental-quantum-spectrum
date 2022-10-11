@@ -72,7 +72,7 @@ class ModelQuantumMap:
             self.optimizer.apply_gradients(zip(grads, self.q_map.parameter_list))
 
             if targets_val is None:
-                pass
+                loss_val = 0
             elif len(targets_val) == 1:
                 loss_val = channel_fidelity(self.q_map, targets_val[0])
             else:
