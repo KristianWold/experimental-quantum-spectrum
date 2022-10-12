@@ -66,8 +66,6 @@ class ModelQuantumMap:
                 loss = self.loss(self.q_map, inputs_batch, targets_batch)
 
             grads = tape.gradient(loss, self.q_map.parameter_list)
-            #for i in range(len(grads)):
-            #    grads[i] = grads[i] + tf.cast(tf.random.normal(grads[i].shape, 0, 0.01), dtype = precision) 
         
             self.optimizer.apply_gradients(zip(grads, self.q_map.parameter_list))
 
@@ -78,7 +76,7 @@ class ModelQuantumMap:
             else:
                 loss_val = np.abs(self.loss(self.q_map, inputs_val, targets_val).numpy())
 
-            self.loss_train.append(np.abs(loss.numpy()))
+            self.loss_train.append(loss.numpy())
             self.loss_val.append(loss_val)
 
             if self.q_map.c is not None:

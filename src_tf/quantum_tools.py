@@ -51,7 +51,8 @@ def generate_ginibre(dim1, dim2, trainable = False):
 def generate_state(d, rank):
     X, _, _ = generate_ginibre(d, rank)
 
-    state = X@X.conj().T/np.trace(X@X.conj().T)
+    XX = tf.linalg.matmul(X,X, adjoint_b = True)
+    state = XX/tf.linalg.trace(XX)
     return state
 
 
@@ -108,7 +109,7 @@ def apply_unitary(state, U):
     return state
 
 
-def pqc_basic(n, L, a, b):
+def pqc_basic(n, L):
     theta_list = [np.random.uniform(-np.pi, np.pi, 2*n) for i in range(L)]
     circuit = qk.QuantumCircuit(n)
     for theta in theta_list:

@@ -75,6 +75,29 @@ class RankMSE:
         return loss
 
 
+class Conj2:
+    def __init__(self, index):
+        self.index = index
+
+    def __call__(self, q_map, input, target):
+        d = q_map.d
+        choi = kraus_to_choi(q_map)
+        spectrum = choi_spectrum(choi, real = True)
+        x = spectrum[:,0]
+        loss = (d*(d-1) + d*x[self.index] - tf.math.reduce_sum(x))
+
+        return loss
+
+
+class RankMSE:
+    def __call__(self, q_map, input, target):
+        
+        rank_target = target
+        loss = (effective_rank(q_map) - rank_target)**2
+
+        return loss
+
+
 def channel_fidelity_loss(q_map, input, target, grad=False):
     q_map_target = target
     loss = -channel_fidelity(q_map, q_map_target)

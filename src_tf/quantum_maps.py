@@ -127,6 +127,7 @@ def choi_steady_state(choi):
 
     steady_state = eig_vec[:, steady_index]
     steady_state = steady_state.reshape(d, d)
+    steady_state = steady_state/tf.linalg.trace(steady_state)
 
     return steady_state
 
@@ -183,58 +184,6 @@ class KrausMap():
         else:
             c = 1/(1 + tf.exp(-self.k))
         return c
-
-
-    def apply_map(self, state):
-        state = tf.expand_dims(state, axis=1)
-        Kstate = tf.matmul(self.kraus, state)
-        KstateK = tf.matmul(Kstate, self.kraus, adjoint_b=True)
-        state = tf.reduce_sum(KstateK, axis=1)
-
-        return state
-
-
-class RegularizedKrausMap():
-
-    def __init__(self,
-                 d = None,
-                 rank = None,
-                 spam = None,
-                 trainable = True,
-                 ):
-
-        self.U = U
-        self.d = d
-        self.rank = rank
-
-        if spam is None:
-            spam = SPAM(d=d,
-                        init = init_ideal(d),
-                        povm = povm_ideal(d))
-        self.spam = spam
-
-        _, self.A, self.B = generate_ginibre(rank*d, d, trainable = trainable)
-        self.C = tf.cast(tf.random.normal((1, rank), 0, 1), dtype = precision)
-        self.C = tf.Variable(self.reg, trainable=True)
-        self.parameter_list = [self.A, self.B, self.C]
-
-        self.kraus = None
-        self.generate_map()
-
-
-    def generate_map(self):
-        d = self.d
-        G = self.A + 1j*self.B
-        U = generate_unitary(G=G)
-        self.kraus = tf.reshape(U, (1, self.rank, self.d, self.d))
-        
-        reg = tf.abs(self.C)
-        reg = self.d*reg/tf.reduce_sum(reg)
-
-        KK = tf.matmul(self.kraus, self.kraus, adjoint_a=True)
-        TrKK = tf.linalg.trace(KK)
-
-        self.kraus = reg*self.kraus/KK
 
 
     def apply_map(self, state):
