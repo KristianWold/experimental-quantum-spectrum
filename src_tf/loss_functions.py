@@ -66,6 +66,24 @@ class RankShrink:
         return loss
 
 
+class AttractionRankTradeoff:
+
+    def __init__(self, inflate=False, weight = 1):
+        if inflate:
+            self.sign = -1
+        else:
+            self.sign = 1
+        
+        self.weight = weight
+
+    def __call__(self, q_map, input, target):
+        d = q_map.d 
+        loss = effective_rank(q_map)/d**2 - self.weight*tf.cast(attraction(q_map, N=10000), dtype = precision)
+        loss = self.sign*loss
+
+        return loss
+
+
 class RankMSE:
     def __call__(self, q_map, input, target):
         

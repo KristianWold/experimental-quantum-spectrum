@@ -83,7 +83,7 @@ class ModelQuantumMap:
                 self.c_list.append(np.abs(self.q_map.c.numpy()))
             
             if verbose:
-                print(f"Step:{step}, train: {np.abs(loss.numpy()):.5f}, val: {loss_val:.5f}")
+                print(f"Step:{step}, train: {loss.numpy():.5f}, val: {loss_val:.5f}")
             
         print(np.abs(loss.numpy()), loss_val)
         self.q_map.generate_map()

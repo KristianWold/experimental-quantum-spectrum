@@ -5,7 +5,7 @@ import multiprocessing as mp
 import random
 import tensorflow as tf
 from qiskit.quantum_info import DensityMatrix
-from qiskit.quantum_info import Operator
+from qiskit.quantum_info import Operator, random_unitary
 from scipy.linalg import sqrtm
 from tqdm.notebook import tqdm
 from utils import *
@@ -164,3 +164,24 @@ def pqc_more_expressive(n, L):
 
     return circuit
 
+
+def attraction(quantum_map, N=1000):
+    d = quantum_map.d
+    I = tf.cast(tf.eye(d, batch_shape=(N,)), dtype = precision)/d
+
+    state_list = []
+    state = np.zeros((d,d))
+    state[0,0] = 1
+    for i in range(N):
+        U = random_unitary(d).data
+        state_haar = DensityMatrix(U@state@U.T.conj()).data
+        state_list.append(state_haar)
+    
+    state = tf.convert_to_tensor(state_list)
+
+    state = quantum_map.apply_map(state)
+    att = tf.math.reduce_mean(state_fidelity(state, I))
+
+    return att
+
+        
