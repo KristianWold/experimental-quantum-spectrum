@@ -8,6 +8,7 @@ from qiskit.quantum_info import DensityMatrix
 from qiskit.quantum_info import Operator, random_unitary
 from scipy.linalg import sqrtm
 from tqdm.notebook import tqdm
+
 from utils import *
 from set_precision import *
 
@@ -27,7 +28,8 @@ def state_fidelity(A, B):
     sqrtB = tf.linalg.sqrtm(B)
     C = sqrtB@A@sqrtB
 
-    fidelity = tf.linalg.trace(tf.linalg.sqrtm(C))
+    sqrtC = tf.linalg.sqrtm(C)
+    fidelity = tf.linalg.trace(sqrtC)
     return tf.abs(fidelity)**2
 
 
@@ -75,19 +77,19 @@ def circuit_to_matrix(circuit):
     return U
 
 
-def maps_to_choi(map_list):
-    d = map_list[0].d
+def channel_to_choi(channel_list):
+    d = channel_list[0].d
     choi = tf.zeros((d**2, d**2), dtype=precision)
     M = np.zeros((d**2, d, d))
     for i in range(d):
         for j in range(d):
-
             M[d*i + j, i, j] = 1
 
     M = tf.convert_to_tensor(M, dtype=precision)
     M_prime = tf.identity(M)
-    for map in map_list:
-        M_prime = map.apply_map(M_prime)
+    for channel in channel_list:
+        M_prime = channel.apply_channel(M_prime)
+
     for i in range(d**2):
         choi += tf.experimental.numpy.kron(M_prime[i], M[i])
 
@@ -109,64 +111,8 @@ def apply_unitary(state, U):
     return state
 
 
-def pqc_basic(n, L):
-    theta_list = [np.random.uniform(-np.pi, np.pi, 2*n) for i in range(L)]
-    circuit = qk.QuantumCircuit(n)
-    for theta in theta_list:
-        for i in range(n):
-            circuit.ry(theta[i], i)
-            circuit.rz(theta[i+n], i)
-
-        for i in range(n-1):
-            circuit.cx(i, i+1)
-            
-    return circuit
-    
-
-def pqc_expressive(n, L):
-    theta_list = [np.random.uniform(0, 2*np.pi, 4*n) for i in range(L)]
-    circuit = qk.QuantumCircuit(n)
-    for theta in theta_list:
-        for i in range(n):
-            circuit.ry(theta[i], i)
-
-        for i in range(n):
-            circuit.crx(theta[i+n], i, (i+1)%n)
-
-        for i in range(n):
-            circuit.ry(theta[i+2*n], i)
-
-        for i in reversed(list(range(n))):
-            circuit.crx(theta[3*n+i], (i+1)%n, i)
-
-    return circuit
-
-
-def pqc_more_expressive(n, L):
-    theta_list = [np.random.uniform(-np.pi, np.pi, 4*n) for i in range(L)]
-    circuit = qk.QuantumCircuit(n)
-    for theta in theta_list:
-        for i in range(n):
-            circuit.ry(theta[i], i)
-            circuit.rz(theta[i+n], i)
-
-        for i in range(n):
-            circuit.cx(i, (i+1)%n)
-
-        for i in range(n):
-            circuit.ry(theta[i+2*n], i)
-            circuit.rx(theta[i+3*n], i)
-
-        for i in range(n):
-            circuit.cx(n-i-1, n-(i+1)%n-1)
-
-        
-
-    return circuit
-
-
-def attraction(quantum_map, N=1000):
-    d = quantum_map.d
+def attraction(channel, N=1000):
+    d = channel.d
     I = tf.cast(tf.eye(d, batch_shape=(N,)), dtype = precision)/d
 
     state_list = []
@@ -179,9 +125,36 @@ def attraction(quantum_map, N=1000):
     
     state = tf.convert_to_tensor(state_list)
 
-    state = quantum_map.apply_map(state)
+    state = channel.apply_channel(state)
     att = tf.math.reduce_mean(state_fidelity(state, I))
 
     return att
+
+
+def measurement(state, U_basis=None, povm=None):
+    d = state.shape[1]
+    if U_basis is None:
+        U_basis = tf.eye(d, dtype=precision)
+        U_basis = tf.expand_dims(U_basis, axis = 0)
+
+    if povm is None:
+        povm = corr_mat_to_povm(np.eye(d))
+
+    Ustate = tf.matmul(U_basis, state)
+    UstateU = tf.matmul(Ustate, U_basis, adjoint_b=True)
+
+    state = tf.expand_dims(UstateU, axis=1)
+    povm = tf.expand_dims(povm, axis=0)
+
+    probs = tf.linalg.trace(state@povm)
+
+    return probs
+
+
+def add_noise_to_probs(tensor, sigma = 0.01):
+    tensor = tensor + tf.math.sqrt(tensor*(1-tensor))*tf.cast(tf.random.normal(tensor.shape, 0, sigma), dtype = precision)
+    tensor = tensor/tf.math.reduce_sum(tensor, axis=1, keepdims=True)
+
+    return tensor
 
         

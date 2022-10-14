@@ -12,127 +12,76 @@ from tqdm.notebook import tqdm
 
 from quantum_tools import *
 from utils import *
-from experiments import *
+from experimental import *
 from set_precision import *
-from quantum_maps import *
+from quantum_channel import *
 
 
-def state_fidelity_loss(q_map, input, target, grad=False):
+# Loss functions
+#######################################################
+def state_fidelity_loss(channel, input, target):
+    """Negative quantum state fidelity"""
     state = input
-    output = q_map.apply_map(input)
+    output = channel.apply_map(state)
     loss = -state_fidelity(output, target)
     return loss
 
 
-def expectation_value_loss(q_map, input, target, grad=False):
+def expectation_value_loss(channel, input, target):
+    """MSE Loss over measured expectation values"""
     state, observable = input
-    state = q_map.apply_map(state)
+    state = channel.apply_map(state)
     output = expectation_value(state, observable)
     loss = tf.abs(output - target)**2
     return loss
 
 
-class ProbabilityLoss:
-    def __init__(self, reg = 0):
-        self.reg = reg
+class ProbabilityMSE:
+    """MSE Loss over measured computational basis probabilities"""
 
-    def __call__(self, q_map, input, target):
+    def __call__(self, channel, input, target):
         N = target.shape[0]
-        d = q_map.spam.init.shape[0]
+        d = channel.spam.init.shape[0]
         U_prep, U_basis = input
 
-        state = tf.repeat(tf.expand_dims(q_map.spam.init, axis=0), N, axis=0)
+        state = tf.repeat(tf.expand_dims(channel.spam.init, axis=0), N, axis=0)
         state = apply_unitary(state, U_prep)
-        state = q_map.apply_map(state)
-        output = measurement(state, U_basis, q_map.spam.povm)
+        state = channel.apply_channel(state)
+        output = measurement(state, U_basis, channel.spam.povm)
         loss = d**2*tf.math.reduce_mean((output - target)**2)
-        if self.reg != 0:
-            rank_eff = effective_rank(q_map)
-            loss += self.reg*rank_eff
-        return loss
-
-
-class RankShrink:
-
-    def __init__(self, rank=None, inflate=False):
-        if inflate:
-            self.sign = -1
-        else:
-            self.sign = 1
-
-    def __call__(self, q_map, input, target):   
-        loss = self.sign*effective_rank(q_map)
-
-        return loss
-
-
-class AttractionRankTradeoff:
-
-    def __init__(self, inflate=False, weight = 1):
-        if inflate:
-            self.sign = -1
-        else:
-            self.sign = 1
         
-        self.weight = weight
-
-    def __call__(self, q_map, input, target):
-        d = q_map.d 
-        loss = effective_rank(q_map)/d**2 - self.weight*tf.cast(attraction(q_map, N=10000), dtype = precision)
-        loss = self.sign*loss
-
         return loss
 
 
 class RankMSE:
-    def __call__(self, q_map, input, target):
+    """MSE loss on effective kraus rank of channel"""
+    def __call__(self, channel, input, target):
         
         rank_target = target
-        loss = (effective_rank(q_map) - rank_target)**2
+        loss = (effective_rank(channel) - rank_target)**2
 
         return loss
 
 
-class Conj2:
-    def __init__(self, index):
-        self.index = index
-
-    def __call__(self, q_map, input, target):
-        d = q_map.d
-        choi = kraus_to_choi(q_map)
-        spectrum = choi_spectrum(choi, real = True)
-        x = spectrum[:,0]
-        loss = (d*(d-1) + d*x[self.index] - tf.math.reduce_sum(x))
-
-        return loss
-
-
-class RankMSE:
-    def __call__(self, q_map, input, target):
-        
-        rank_target = target
-        loss = (effective_rank(q_map) - rank_target)**2
-
-        return loss
-
-
-def channel_fidelity_loss(q_map, input, target, grad=False):
-    q_map_target = target
-    loss = -channel_fidelity(q_map, q_map_target)
+def channel_fidelity_loss(channel, input, target):
+    """Negative channel fidelity between quantum channels"""
+    channel_target = target
+    loss = -channel_fidelity(channel, channel_target)
     return loss
 
 
-def channel_norm_loss(q_map, input, target, grad=False):
-    q_map_target = target
-    choi_model = kraus_to_choi(q_map)
-    choi_target = kraus_to_choi(q_map_target)
+def channel_MSE_loss(channel, input, target):
+    """Elementwise MSE loss between choi matrices"""
+    channel_target = target
+    choi_model = kraus_to_choi(channel)
+    choi_target = kraus_to_choi(channel_target)
 
     loss = tf.math.reduce_sum(tf.abs(choi_model - choi_target)**2)
     return loss
 
 
 class SpectrumDistance():
-
+    """Distance measure between spectra"""
     def __init__(self, sigma = 0.1, k = 1000):
         self.sigma = sigma
         self.sigma_ = sigma
@@ -140,11 +89,9 @@ class SpectrumDistance():
         self.mode = "density"
         self.t = 0
 
-    def __call__(self, q_map, input, target, grad=False):
+    def __call__(self, channel, input, target):
         spectrum_target = input[0]
-
-        choi_model = kraus_to_choi(q_map)
-        spectrum_model = choi_spectrum(choi_model, real=True)
+        spectrum_model = channel_spectrum(channel, real=True)
 
         if self.mode == "density":
             loss = self.overlap(spectrum_model, spectrum_model)
@@ -197,37 +144,70 @@ class SpectrumDistance():
         return distance
 
 
-def min_pair_distance(a_list = None,
-                      b_list = None,
-                      connections = None,
-                      num_iter = 100,
-                      T = 1):
+#Regularizers
+#######################################################
 
-    length = len(a_list)
-    if connections is None:
-        connections = greedy_pair_distance(a_list, b_list)
+class RankShrink:
+    """Penalize effective kraus rank of channel"""
+    def __init__(self, inflate=False):
+        if inflate:
+            self.sign = -1
+        else:
+            self.sign = 1
 
-    distance = pair_distance(a_list, b_list, connections)
-    distance_list = [distance]
+    def __call__(self, channel, input, target):   
+        loss = self.sign*effective_rank(channel)
 
-    for i in range(num_iter):
-        idx1 = random.randint(0, length-1)
-        idx2 = random.randint(0, length-2)
-        if idx1 <= idx2:
-            idx2 += 1
+        return loss
 
-        distance_old = np.linalg.norm(a_list[idx1] - b_list[connections[idx1]]) \
-                     + np.linalg.norm(a_list[idx2] - b_list[connections[idx2]])
-        distance_new = np.linalg.norm(a_list[idx2] - b_list[connections[idx1]]) \
-                     + np.linalg.norm(a_list[idx1] - b_list[connections[idx2]])
-        distance_diff = distance_new - distance_old
+#Adverserial Loss
+#######################################################
+
+#class AttractionRankTradeoff:
+#    """Optimize towards channel with high(low) effective rank,
+#       and low(high) attraction"""
+#
+#    def __init__(self, inflate=False, weight = 1):
+#        if inflate:
+#            self.sign = -1
+#        else:
+#            self.sign = 1
+#        
+#        self.weight = weight
+#
+#    def __call__(self, channel, input, target):
+#        d = channel.d 
+#        loss = effective_rank(channel)/d**2 - self.weight*tf.cast(attraction(channel, N=10000), dtype = precision)
+#        loss = self.sign*loss
+#
+#        return loss
 
 
-        u = random.uniform(0,1)
-        if np.exp(-distance_diff/T) > u:
-            distance += distance_diff
-            connections[idx1], connections[idx2] = connections[idx2], connections[idx1]
+class AttractionRankTradeoff:
+    """Optimize towards channel with high(low) effective rank,
+       and low(high) attraction"""
 
-        distance_list.append(distance)
+    def __init__(self, weight = 1): 
+        self.weight = weight
 
-    return connections, distance_list
+    def __call__(self, channel, input, target):
+        a = target[0]
+        loss = (effective_rank(channel) - a)**2 + self.weight*tf.cast(attraction(channel, N=1000), dtype = precision)
+
+        return loss
+
+
+class Conj2:
+    """Optimize towards channel that breaks conj. 2"""
+    def __init__(self, index):
+        self.index = index
+
+    def __call__(self, channel, input, target):
+        d = channel.d
+        spectrum = channel_spectrum(channel, real = True)
+        x = spectrum[:,0]
+        loss = (d*(d-1) + d*x[self.index] - tf.math.reduce_sum(x))
+
+        return loss
+
+##############################

@@ -13,33 +13,33 @@ from utils import *
 from experiments import *
 
 
-def state_density_loss(q_map, input, target, grad=False):
+def state_density_loss(channel, input, target, grad=False):
     state = input
-    output = q_map.apply_map(input)
+    output = channel.apply_map(input)
     cost = -state_fidelity(output, target)
     return cost
 
 
-def expectation_value_loss(q_map, input, target, grad=False):
+def expectation_value_loss(channel, input, target, grad=False):
     state, U_basis, observable = input
-    state = q_map.apply_map(state)
-    probs = measurement(state, U_basis, q_map.povm)
+    state = channel.apply_map(state)
+    probs = measurement(state, U_basis, channel.povm)
     output = expectation_value(probs, observable)
     cost = np.abs(output - target)**2
     return cost
 
 
-def probs_loss(q_map, input, target, grad=False):
+def probs_loss(channel, input, target, grad=False):
     state, U_basis, observable = input
-    state = q_map.apply_map(state)
-    output = measurement(state, U_basis, q_map.povm)
+    state = channel.apply_map(state)
+    output = measurement(state, U_basis, channel.povm)
     cost = np.abs(np.sum((output - target)**2))
     return cost
 
 
-def channel_fidelity_loss(q_map, input, target, grad=False):
-    q_map_target = input
-    cost = -channel_fidelity(q_map, q_map_target)
+def channel_fidelity_loss(channel, input, target, grad=False):
+    channel_target = input
+    cost = -channel_fidelity(channel, channel_target)
     return cost
 
 
@@ -50,11 +50,11 @@ class SpectrumDistance():
         self.T = T
         self.connections = None
 
-    def __call__(self, q_map, input, target, grad=False):
-        choi_model = maps_to_choi([q_map])
+    def __call__(self, channel, input, target, grad=False):
+        choi_model = maps_to_choi([channel])
 
-        q_map_target = input
-        choi_target = maps_to_choi([q_map_target])
+        channel_target = input
+        choi_target = maps_to_choi([channel_target])
 
         spectrum_model = [np.array((a,b)) for a,b in zip(*choi_spectrum(choi_model))]
         spectrum_target = [np.array((a,b)) for a,b in zip(*choi_spectrum(choi_target))]
