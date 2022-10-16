@@ -39,14 +39,20 @@ def expectation_value(probs, observable):
 
 
 #@profile
-def generate_ginibre(dim1, dim2, trainable = False):
-    A = tf.cast(tf.random.normal((dim1, dim2), 0, 1), dtype = precision)
-    B = tf.cast(tf.random.normal((dim1, dim2), 0, 1), dtype = precision)
+def generate_ginibre(dim1, dim2, trainable = False, complex = True):
+    A = tf.random.normal((dim1, dim2), 0, 1)
+    if complex:
+        B = tf.random.normal((dim1, dim2), 0, 1)
+    else:
+        B = None
     if trainable:
         A = tf.Variable(A, trainable = True)
-        B = tf.Variable(B, trainable = True)
+        if B is not None:
+            B = tf.Variable(B, trainable = True)
 
-    X = A + 1j*B
+    X = A
+    if complex:
+        X = tf.cast(X, dtype=precision) + 1j*tf.cast(B, dtype=precision)
     return X, A, B
 
 
