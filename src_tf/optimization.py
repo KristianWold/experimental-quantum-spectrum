@@ -98,7 +98,7 @@ class ModelQuantumMap:
             #    self.c_list.append(np.abs(self.channel.c.numpy()))
             
             #if verbose:
-            print(f"Step:{step}, train: {loss.numpy():.5f}")
+            print(f"Step:{step}, train: {np.real(loss.numpy())}")
             
         print(np.real(loss.numpy()))
         self.channel.generate_channel()

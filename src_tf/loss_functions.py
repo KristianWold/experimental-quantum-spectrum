@@ -212,14 +212,15 @@ class Conj2:
 
 class Conj3:
     """Optimize towards channel that breaks conj. 2"""
-    def __init__(self, index):
+    def __init__(self, index, sign = 1):
         self.index = index
+        self.sign = sign
 
     def __call__(self, channel, input, target):
         d = channel.d
         z = channel_spectrum(channel, real = False)
-        loss = tf.abs(z[self.index])**d - tf.abs(tf.math.reduce_prod(z))
+        loss = self.sign*tf.abs(z[self.index])**d - tf.abs(tf.math.reduce_prod(z))
 
-        return loss
+        return loss[0]
 
 ##############################

@@ -358,11 +358,11 @@ class LindbladMap():
             self.generate_channel()
 
     def generate_channel(self):
-        G = self.H_params[0] +1j*self.H_params[0]
+        G = tf.cast(self.H_params[0], dtype=precision) +1j*tf.cast(self.H_params[1], dtype=precision)
         H = G + tf.linalg.adjoint(G)
         gamma = tf.cast(tf.abs(self.gamma_params[0]), dtype = precision)
 
-        L_list = [A + 1j*B for A,B in zip(self.A_list, self.B_list)]
+        L_list = [tf.cast(A, dtype=precision) + 1j*tf.cast(B, dtype=precision) for A,B in zip(self.A_list, self.B_list)]
         
         ab = tf.linalg.trace(tf.matmul(self.I/np.sqrt(self.d), L_list[0], adjoint_a=True))
         L_list[0] = (L_list[0] -  ab*self.I/np.sqrt(self.d))
