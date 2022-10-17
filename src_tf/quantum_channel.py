@@ -77,8 +77,8 @@ def channel_to_choi(channel_list):
 
 
 def channel_fidelity(channel_A, channel_B):
-    choi_A = kraus_to_choi(channel_A)
-    choi_B = kraus_to_choi(channel_B)
+    choi_A = channel_A.choi
+    choi_B = channel_B.choi
     d_squared = choi_A.shape[0]
     fidelity = state_fidelity(choi_A, choi_B)/d_squared
 

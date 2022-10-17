@@ -65,16 +65,16 @@ class RankMSE:
 
 def channel_fidelity_loss(channel, input, target):
     """Negative channel fidelity between quantum channels"""
-    channel_target = target
+    channel_target = target[0]
     loss = -channel_fidelity(channel, channel_target)
     return loss
 
 
-def channel_MSE_loss(channel, input, target):
+def channel_mse_loss(channel, input, target):
     """Elementwise MSE loss between choi matrices"""
-    channel_target = target
-    choi_model = kraus_to_choi(channel)
-    choi_target = kraus_to_choi(channel_target)
+    channel_target = target[0]
+    choi_model = channel.choi
+    choi_target = channel_target.choi
 
     loss = tf.math.reduce_sum(tf.abs(choi_model - choi_target)**2)
     return loss
