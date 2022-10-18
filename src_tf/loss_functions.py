@@ -55,10 +55,13 @@ class ProbabilityMSE:
 
 class RankMSE:
     """MSE loss on effective kraus rank of channel"""
+    def __init__(self, weight):
+        self.weight = weight
+
     def __call__(self, channel, input, target):
         
         rank_target = target
-        loss = (effective_rank(channel) - rank_target)**2
+        loss = self.weight*(effective_rank(channel) - rank_target)**2
 
         return loss
 
@@ -149,14 +152,32 @@ class SpectrumDistance():
 
 class RankShrink:
     """Penalize effective kraus rank of channel"""
-    def __init__(self, inflate=False):
+    def __init__(self, inflate=False, weight=1):
+        self.weight = weight
+
         if inflate:
             self.sign = -1
         else:
             self.sign = 1
 
     def __call__(self, channel, input, target):   
-        loss = self.sign*effective_rank(channel)
+        loss = self.sign*self.weight*effective_rank(channel)
+
+        return loss
+
+
+class AttractionShrink:
+    """Penalize effective kraus rank of channel"""
+    def __init__(self, inflate=False, weight=1):
+        self.weight = weight
+        
+        if inflate:
+            self.sign = -1
+        else:
+            self.sign = 1
+
+    def __call__(self, channel, input, target):   
+        loss = self.sign*self.weight*tf.cast(attraction(channel, N=1000), dtype = precision)
 
         return loss
 
@@ -218,9 +239,14 @@ class Conj3:
 
     def __call__(self, channel, input, target):
         d = channel.d
-        z = channel_spectrum(channel, real = False)
-        loss = self.sign*tf.abs(z[self.index])**d - tf.abs(tf.math.reduce_prod(z))
+        spectrum = channel_spectrum(channel, real = False)
+        loss = self.sign*self._conjecture(spectrum)
 
         return loss[0]
+    
+    def _conjecture(self, spectrum):
+        d = int(np.sqrt(spectrum.shape[0]))
+        z = spectrum
+        return tf.abs(z[self.index])**d - tf.abs(tf.math.reduce_prod(z))
 
 ##############################

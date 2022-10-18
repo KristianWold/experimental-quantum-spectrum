@@ -53,6 +53,7 @@ class ModelQuantumMap:
               inputs_val = None,
               targets_val = None,
               num_iter = 1000,
+              verbose = True,
               N = 0):
 
         self.inputs = inputs
@@ -97,8 +98,8 @@ class ModelQuantumMap:
             #if self.channel.c is not None:
             #    self.c_list.append(np.abs(self.channel.c.numpy()))
             
-            #if verbose:
-            print(f"Step:{step}, train: {np.real(loss.numpy())}")
+            if verbose:
+                print(f"Step:{step}, train: {np.real(loss.numpy())}")
             
         print(np.real(loss.numpy()))
         self.channel.generate_channel()
@@ -106,3 +107,9 @@ class ModelQuantumMap:
     def zero_optimizer(self):
         for var in self.optimizer.variables():
             var.assign(tf.zeros_like(var))
+
+    def set_loss_function(self, loss_function, zero_optimizer=True):
+        self.loss_function = loss_function
+        if zero_optimizer:
+            self.zero_optimizer()
+
