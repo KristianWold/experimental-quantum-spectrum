@@ -339,49 +339,29 @@ class LindbladMap():
                         povm = povm_ideal(d))
         self.spam = spam
 
-        _, A, B = generate_ginibre(d, d, trainable = trainable)
-        self.H_params = [A, B]
-        _, A, _ = generate_ginibre(rank-1, 1, trainable = trainable, complex=False)
-        self.gamma_params = [A]
+        _, self.A, self.B = generate_ginibre(d, d, trainable = trainable)
+        _, self.C, self.D = generate_ginibre(d**2, rank-1, trainable = trainable)
+        _, self.a, _ = generate_ginibre(1, 1, trainable = trainable, complex=False)
+        
 
-        self.A_list = []
-        self.B_list = []
-        for i in range(rank-1):
-            _, A, B = generate_ginibre(d, d, trainable = trainable)
-            self.A_list.append(A)
-            self.B_list.append(B)
-
-        self.parameter_list = self.H_params + self.gamma_params + self.A_list + self.B_list
+        self.parameter_list = [self.A, self.B, self.C, self.D, self.a]
 
         self.super_operator = None
         if generate:
             self.generate_channel()
 
     def generate_channel(self):
-        G = tf.cast(self.H_params[0], dtype=precision) +1j*tf.cast(self.H_params[1], dtype=precision)
-        H = G + tf.linalg.adjoint(G)
-        gamma = tf.cast(tf.abs(self.gamma_params[0]), dtype = precision)
+        G = tf.cast(self.A, dtype = precision) + 1j*tf.cast(self.B, dtype = precision)
+        H = (G + tf.linalg.adjoint(G))/2
 
-        L_list = [tf.cast(A, dtype=precision) + 1j*tf.cast(B, dtype=precision) for A,B in zip(self.A_list, self.B_list)]
+        G = tf.cast(self.C, dtype = precision) + 1j*tf.cast(self.D, dtype = precision)
+        choi = tf.matmul(G, G, adjoint_b = True)
+        phi = reshuffle(choi)
+        phi_star = partial_trace(choi)
+        expo = -1j*(kron(self.I, H) - kron(tf.transpose(H), self.I)) + phi - 0.5*(kron(tf.transpose(phi_star), self.I) + kron(self.I, phi_star))
         
-        ab = tf.linalg.trace(tf.matmul(self.I/np.sqrt(self.d), L_list[0], adjoint_a=True))
-        L_list[0] = (L_list[0] -  ab*self.I/np.sqrt(self.d))
-        L_list[0] = L_list[0]/tf.math.sqrt(tf.linalg.trace(tf.matmul(L_list[0], L_list[0], adjoint_a=True)))
-
-        for i in range(1, len(L_list)):
-            for j in range(i):
-                ab = tf.linalg.trace(tf.matmul(L_list[j], L_list[i], adjoint_a=True))
-                L_list[i] += -ab*L_list[j]
-
-            L_list[i] = L_list[i]/tf.math.sqrt(tf.linalg.trace(tf.matmul(L_list[i], L_list[i], adjoint_a=True)))
-        
-        LB = -1j*(kron(H, self.I) - kron(self.I, tf.math.conj(H)))
-        for i, L in enumerate(L_list):
-            L2 = tf.matmul(L, L, adjoint_a=True)
-            LB += gamma[i]*(kron(L, tf.math.conj(L)) - 0.5*((kron(L2, self.I) + kron(self.I, tf.math.conj(L2)))))
-        
-        self.super_operator = tf.linalg.expm(LB)
-        
+        t = tf.cast(tf.abs(self.a), dtype = precision)
+        self.super_operator = tf.linalg.expm(t*expo)
 
     def apply_channel(self, state):
         state = tf.reshape(state, (-1, d**2, 1))
@@ -393,6 +373,8 @@ class LindbladMap():
     @property    
     def choi(self):
         return reshuffle(self.super_operator)
+
+    
 
 
 """
