@@ -228,7 +228,7 @@ class DilutedKrausMap(KrausMap):
             self.generate_channel()
 
     def generate_channel(self):
-        Kraus.generate_channel()
+        KrausMap.generate_channel()
         
         if self.U is not None:
             c = 1/(1 + tf.exp(-self.k))

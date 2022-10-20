@@ -49,3 +49,19 @@ def index_generator(n, N=None, trace=True):
     np.random.shuffle(index_list)
 
     return index_list[:N, 0], index_list[:N, 1]
+
+
+def train_val_split(inputs, targets, ratio = 0.9):
+    N = targets.shape[0]
+    N_train = int(ratio*N)
+    inputs_train, inputs_val  = [inputs[0][:N_train], inputs[1][:N_train]], [inputs[0][N_train:], inputs[1][N_train:]]
+    targets_train, targets_val = targets[:N_train], targets[N_train:]
+
+    return inputs_train, targets_train, inputs_val, targets_val
+
+
+def average_tensors(tensor_list):
+    pass
+
+
+

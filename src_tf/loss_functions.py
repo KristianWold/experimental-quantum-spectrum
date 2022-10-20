@@ -53,6 +53,23 @@ class ProbabilityMSE:
         return loss
 
 
+class KLDiv:
+    """MSE Loss over measured computational basis probabilities"""
+
+    def __call__(self, channel, input, target):
+        N = target.shape[0]
+        d = channel.spam.init.shape[0]
+        U_prep, U_basis = input
+
+        state = tf.repeat(tf.expand_dims(channel.spam.init, axis=0), N, axis=0)
+        state = apply_unitary(state, U_prep)
+        state = channel.apply_channel(state)
+        output = measurement(state, U_basis, channel.spam.povm)
+        loss = tf.math.reduce_sum(target*tf.math.log((target + 1e-32) /output))
+        
+        return loss
+
+
 class RankMSE:
     """MSE loss on effective kraus rank of channel"""
     def __init__(self, weight):

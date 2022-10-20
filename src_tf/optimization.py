@@ -19,14 +19,29 @@ from set_precision import *
 
 
 class Logger:
-    def __init__(self
-                 ):
+    def __init__(self,
+                 sample_freq = 100,
+                 loss_function = None,
+                 verbose = True):
+        self.sample_freq = sample_freq
+        self.loss_function = loss_function
+        self.verbose = verbose
         
-        self.loss_train = []
-        self.loss_val = []
+        self.loss_train_list = []
+        self.loss_val_list = []
 
     def log(self, other):
-        pass
+        if other.counter%self.sample_freq == 0: 
+            loss_train = np.real(self.loss_function(other.channel, other.inputs, other.targets).numpy())
+            self.loss_train_list.append(loss_train)
+            
+            loss_val = None
+            if other.targets_val != None:
+                loss_val = np.real(self.loss_function(other.channel, other.inputs_val, other.targets_val).numpy())
+            
+            self.loss_val_list.append(loss_val)
+            if self.verbose:
+                print(loss_train, loss_val)
 
 
 class ModelQuantumMap:
@@ -60,6 +75,7 @@ class ModelQuantumMap:
         self.targets = targets
         self.inputs_val = inputs_val
         self.targets_val = targets_val
+        self.counter = 0
 
         if N != 0:
             indices = list(range(inputs.shape[0]))
@@ -82,26 +98,12 @@ class ModelQuantumMap:
                     loss += loss_function(self.channel, inputs_batch, targets_batch)
 
             grads = tape.gradient(loss, self.channel.parameter_list)
-        
             self.optimizer.apply_gradients(zip(grads, self.channel.parameter_list))
-            #self.logger.log(self)
-            #if targets_val is None:
-            #    loss_val = 0
-            #elif len(targets_val) == 1:
-            #    loss_val = channel_fidelity(self.channel, targets_val[0])
-            #else:
-            #   loss_val = np.abs(self.loss(self.channel, inputs_val, targets_val).numpy())
 
-            #self.loss_train.append(loss.numpy())
-            #self.loss_val.append(loss_val)
+            self.logger.log(self)
+            self.counter += 1
 
-            #if self.channel.c is not None:
-            #    self.c_list.append(np.abs(self.channel.c.numpy()))
-            
-            if verbose:
-                print(f"Step:{step}, train: {np.real(loss.numpy())}")
-            
-        print(np.real(loss.numpy()))
+        self.logger.log(self)    
         self.channel.generate_channel()
     
     def zero_optimizer(self):
