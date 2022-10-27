@@ -97,15 +97,11 @@ def channel_spectrum(channel, real=True):
     return eig
 
 
-def kraus_spectrum(kraus):
-    rank = kraus.shape[1]
-    d = kraus.shape[2]
-    vectors = tf.reshape(kraus, (rank, d**2))
-    print(vectors.shape)
-    norm = tf.linalg.adjoint(vectors)*vectors
-    norm = tf.math.sqrt(tf.math.reduce_sum(norm, axis=1))
-    
-    return norm
+def choi_spectrum(channel):
+    eig, _ = tf.linalg.eig(channel.choi)
+    eig = tf.expand_dims(eig, axis=1)
+
+    return eig
 
 
 def normalize_spectrum(spectrum, scale=1):
@@ -140,9 +136,12 @@ def dilute_channel(U, c, kraus_map):
 
 class Channel():
     def __init__(self, d, rank, spam):
-        d = None,
-        rank = None,
-        spam = None
+        self.d = d
+        self.rank = rank
+        self.spam = spam
+    
+        self.channel = None
+        self.generate_channel()
 
     def generate_channel(self):
         pass
@@ -153,6 +152,48 @@ class Channel():
     @property    
     def choi(self):
         pass
+
+
+class UnitaryMap(Channel):
+
+    def __init__(self,
+                 d = None,
+                 spam = None,
+                 trainable = True,
+                 generate = True,
+                 ):
+
+        self.d = d
+
+        if spam is None:
+            spam = SPAM(d=d,
+                        init = init_ideal(d),
+                        povm = povm_ideal(d))
+        self.spam = spam
+
+        _, self.A, self.B = generate_ginibre(d, d, trainable = trainable)
+        self.parameter_list = [self.A, self.B]
+
+        self.kraus = None
+        if generate:
+            self.generate_channel()
+
+    def generate_channel(self):
+        G = tf.cast(self.A, dtype=precision) + 1j*tf.cast(self.B, dtype=precision)
+        self.U = tf.reshape(generate_unitary(G=G), (1, 1, self.d, self.d))
+
+    def apply_channel(self, state):
+        U = tf.reshape(self.U, (1, self.d, self.d)) 
+        Ustate = tf.matmul(self.U, state)
+        UstateU = tf.matmul(Ustate, self.U, adjoint_b=True)
+        state = tf.reduce_sum(UstateU, axis=1)
+
+        return state
+
+    @property    
+    def choi(self):
+        choi = tf.experimental.numpy.kron(self.U, tf.math.conj(self.U))
+        return choi
 
 
 class KrausMap(Channel):
@@ -212,13 +253,13 @@ class DilutedKrausMap(KrausMap):
                  generate = True,
                  ):
 
-        KrausMap.__init__(d, rank, spam, trainable, generate=False)
+        KrausMap.__init__(self, d=d, rank=rank, spam=spam, trainable=trainable, generate=False)
 
         self.U = U
         if self.U is not None:
             self.U = tf.expand_dims(tf.expand_dims(self.U, 0), 0)
             k = -np.log(1/c - 1)
-            self.k = tf.Variable(tf.cast(k, dtype = precision), trainable = True)
+            self.k = tf.Variable(k, trainable = True)
             self.parameter_list.append(self.k)
         else:
             self.k = None
@@ -228,10 +269,11 @@ class DilutedKrausMap(KrausMap):
             self.generate_channel()
 
     def generate_channel(self):
-        KrausMap.generate_channel()
+        KrausMap.generate_channel(self)
         
         if self.U is not None:
             c = 1/(1 + tf.exp(-self.k))
+            c = tf.cast(c, dtype = precision)
             self.kraus = tf.concat([tf.sqrt(c)*self.U, tf.sqrt(1-c)*self.kraus], axis=1)
 
     @property
@@ -241,6 +283,46 @@ class DilutedKrausMap(KrausMap):
         else:
             c = 1/(1 + tf.exp(-self.k))
         return c
+
+
+
+class ExtractedKrausMap(KrausMap):
+
+    def __init__(self,
+                 d = None,
+                 rank = None,
+                 spam = None,
+                 trainable = True,
+                 generate = True,
+                 ):
+
+        KrausMap.__init__(self, d=d, rank=rank-1, spam=spam, trainable=trainable, generate=False)
+        self.UnitaryMap = UnitaryMap(d=d, trainable=trainable, generate=False)
+        _, self.k, _      = generate_ginibre(1, 1, trainable = trainable, complex=False)
+
+        self.parameter_list.extend(self.UnitaryMap.parameter_list)
+        self.parameter_list.append(self.k)
+
+        self.kraus = None
+        if generate:
+            self.generate_channel()
+
+    def generate_channel(self):
+        KrausMap.generate_channel(self)
+        self.UnitaryMap.generate_channel()
+
+        c = 1/(1 + tf.exp(-self.k))
+        c = tf.cast(c, dtype = precision)
+        self.kraus = tf.concat([tf.sqrt(c)*self.UnitaryMap.U, tf.sqrt(1-c)*self.kraus], axis=1)
+
+    @property
+    def c(self):
+        if self.k is None:
+            c = None
+        else:
+            c = 1/(1 + tf.exp(-self.k))
+        return c
+
 
 
 class SquaredKrausMap(KrausMap):

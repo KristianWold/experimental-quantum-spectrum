@@ -30,8 +30,8 @@ class Logger:
         self.loss_train_list = []
         self.loss_val_list = []
 
-    def log(self, other):
-        if other.counter%self.sample_freq == 0: 
+    def log(self, other, push=False):
+        if other.counter%self.sample_freq == 0:
             loss_train = np.real(self.loss_function(other.channel, other.inputs, other.targets).numpy())
             self.loss_train_list.append(loss_train)
             
@@ -40,7 +40,7 @@ class Logger:
                 loss_val = np.real(self.loss_function(other.channel, other.inputs_val, other.targets_val).numpy())
             
             self.loss_val_list.append(loss_val)
-            if self.verbose:
+            if self.verbose or push:
                 print(loss_train, loss_val)
 
 
@@ -78,7 +78,7 @@ class ModelQuantumMap:
         self.counter = 0
 
         if N != 0:
-            indices = list(range(inputs.shape[0]))
+            indices = list(range(targets.shape[0]))
 
         for step in tqdm(range(num_iter)):
             if N != 0:
@@ -105,6 +105,7 @@ class ModelQuantumMap:
 
         self.logger.log(self)    
         self.channel.generate_channel()
+        self.logger.log(self, push=True)  
     
     def zero_optimizer(self):
         for var in self.optimizer.variables():
