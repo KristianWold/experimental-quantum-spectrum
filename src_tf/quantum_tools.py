@@ -101,7 +101,7 @@ def channel_to_choi(channel_list):
 
     return choi
 
-
+"""
 def channel_fidelity(map_A, map_B):
     choi_A = maps_to_choi([map_A])
     choi_B = maps_to_choi([map_B])
@@ -109,6 +109,7 @@ def channel_fidelity(map_A, map_B):
     fidelity = state_fidelity(choi_A, choi_B)/d_squared
 
     return fidelity
+"""
 
 
 def apply_unitary(state, U):

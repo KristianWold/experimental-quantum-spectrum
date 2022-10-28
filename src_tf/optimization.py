@@ -22,18 +22,20 @@ class Logger:
     def __init__(self,
                  sample_freq = 100,
                  loss_function = None,
-                 verbose = True):
+                 verbose = True
+                ):
         self.sample_freq = sample_freq
         self.loss_function = loss_function
         self.verbose = verbose
-        
+
         self.loss_train_list = []
         self.loss_val_list = []
 
     def log(self, other, push=False):
         if other.counter%self.sample_freq == 0:
-            loss_train = np.real(self.loss_function(other.channel, other.inputs, other.targets).numpy())
-            self.loss_train_list.append(loss_train)
+            loss_train = None
+            #loss_train = np.real(self.loss_function(other.channel, other.inputs, other.targets).numpy())
+            #self.loss_train_list.append(loss_train)
             
             loss_val = None
             if other.targets_val != None:
