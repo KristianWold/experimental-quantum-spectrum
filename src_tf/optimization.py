@@ -32,10 +32,10 @@ class Logger:
         self.loss_val_list = []
 
     def log(self, other, push=False):
-        if other.counter%self.sample_freq == 0:
+        if other.counter%self.sample_freq == 0 or push:
             loss_train = None
-            #loss_train = np.real(self.loss_function(other.channel, other.inputs, other.targets).numpy())
-            #self.loss_train_list.append(loss_train)
+            loss_train = np.real(self.loss_function(other.channel, other.inputs, other.targets).numpy())
+            self.loss_train_list.append(loss_train)
             
             loss_val = None
             if other.targets_val != None:
@@ -70,7 +70,6 @@ class ModelQuantumMap:
               inputs_val = None,
               targets_val = None,
               num_iter = 1000,
-              verbose = True,
               N = 0):
 
         self.inputs = inputs
