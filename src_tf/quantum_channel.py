@@ -17,14 +17,14 @@ from set_precision import *
 
 def reshuffle(A):
     d = int(np.sqrt(A.shape[0]))
-    A = tf.reshape(A, (d,d,d,d))
+    A = tf.reshape(A, (d, d, d, d))
     A = tf.einsum("jklm -> jlkm", A)
-    A = tf.reshape(A, (d**2,d**2))
+    A = tf.reshape(A, (d**2, d**2))
 
     return A
 
 
-def kraus_to_choi(kraus_channel, use_reshuffle = True):
+def kraus_to_choi(kraus_channel, use_reshuffle=True):
     kraus = kraus_channel.kraus
     rank = kraus.shape[1]
     channel = 0
@@ -38,6 +38,7 @@ def kraus_to_choi(kraus_channel, use_reshuffle = True):
 
     return choi
 
+
 def state_purity(A):
     eig, _ = tf.linalg.eig(A)
     purity = tf.math.reduce_sum(eig**2)
@@ -47,10 +48,10 @@ def state_purity(A):
 def effective_rank(channel):
     choi = channel.choi
     d2 = choi.shape[0]
-    
+
     purity = state_purity(choi)
-    
-    rank_eff = d2/purity
+
+    rank_eff = d2 / purity
     return rank_eff
 
 
@@ -64,7 +65,7 @@ def channel_to_choi(channel_list):
     for i in range(d):
         for j in range(d):
 
-            M[d*i + j, i, j] = 1
+            M[d * i + j, i, j] = 1
 
     M = tf.convert_to_tensor(M, dtype=precision)
     M_prime = tf.identity(M)
@@ -80,7 +81,7 @@ def channel_fidelity(channel_A, channel_B):
     choi_A = channel_A.choi
     choi_B = channel_B.choi
     d_squared = choi_A.shape[0]
-    fidelity = state_fidelity(choi_A, choi_B)/d_squared
+    fidelity = state_fidelity(choi_A, choi_B) / d_squared
 
     return fidelity
 
@@ -88,7 +89,7 @@ def channel_fidelity(channel_A, channel_B):
 def channel_spectrum(channel, real=True):
     eig, _ = tf.linalg.eig(reshuffle(channel.choi))
     eig = tf.expand_dims(eig, axis=1)
-    
+
     if real:
         x = tf.cast(tf.math.real(eig), dtype=precision)
         y = tf.cast(tf.math.imag(eig), dtype=precision)
@@ -107,25 +108,26 @@ def choi_spectrum(channel):
 def normalize_spectrum(spectrum, scale=1):
     spectrum = spectrum.numpy()
     idx = np.argmax(np.linalg.norm(spectrum, axis=1))
-    spectrum[idx] = (0,0)
+    spectrum[idx] = (0, 0)
 
     max = np.max(np.linalg.norm(spectrum, axis=1))
-    spectrum = scale/max*spectrum
+    spectrum = scale / max * spectrum
 
-    spectrum[idx] = (1,0)
+    spectrum[idx] = (1, 0)
     spectrum = tf.cast(tf.convert_to_tensor(spectrum), dtype=precision)
 
     return spectrum
 
-def choi_steady_state(choi):
-    d = int(np.sqrt(choi.shape[0]))
-    choi = reshuffle_choi(choi)
-    eig, eig_vec = np.linalg.eig(choi)
+
+def channel_steady_state(channel):
+    d = channel.d
+    super_operator = reshuffle(channel.choi)
+    eig, eig_vec = np.linalg.eig(super_operator)
     steady_index = tf.math.argmax(tf.abs(eig))
 
     steady_state = eig_vec[:, steady_index]
     steady_state = steady_state.reshape(d, d)
-    steady_state = steady_state/tf.linalg.trace(steady_state)
+    steady_state = steady_state / tf.linalg.trace(steady_state)
 
     return steady_state
 
@@ -134,12 +136,12 @@ def dilute_channel(U, c, kraus_map):
     pass
 
 
-class Channel():
+class Channel:
     def __init__(self, d, rank, spam):
         self.d = d
         self.rank = rank
         self.spam = spam
-    
+
         self.channel = None
         self.generate_channel()
 
@@ -149,29 +151,27 @@ class Channel():
     def apply_channel(self, state):
         pass
 
-    @property    
+    @property
     def choi(self):
         pass
 
 
 class UnitaryMap(Channel):
-
-    def __init__(self,
-                 d = None,
-                 spam = None,
-                 trainable = True,
-                 generate = True,
-                 ):
+    def __init__(
+        self,
+        d=None,
+        spam=None,
+        trainable=True,
+        generate=True,
+    ):
 
         self.d = d
 
         if spam is None:
-            spam = SPAM(d=d,
-                        init = init_ideal(d),
-                        povm = povm_ideal(d))
+            spam = SPAM(d=d, init=init_ideal(d), povm=povm_ideal(d))
         self.spam = spam
 
-        _, self.A, self.B = generate_ginibre(d, d, trainable = trainable)
+        _, self.A, self.B = generate_ginibre(d, d, trainable=trainable)
         self.parameter_list = [self.A, self.B]
 
         self.kraus = None
@@ -179,43 +179,41 @@ class UnitaryMap(Channel):
             self.generate_channel()
 
     def generate_channel(self):
-        G = tf.cast(self.A, dtype=precision) + 1j*tf.cast(self.B, dtype=precision)
+        G = tf.cast(self.A, dtype=precision) + 1j * tf.cast(self.B, dtype=precision)
         self.U = tf.reshape(generate_unitary(G=G), (1, 1, self.d, self.d))
 
     def apply_channel(self, state):
-        U = tf.reshape(self.U, (1, self.d, self.d)) 
+        U = tf.reshape(self.U, (1, self.d, self.d))
         Ustate = tf.matmul(self.U, state)
         UstateU = tf.matmul(Ustate, self.U, adjoint_b=True)
         state = tf.reduce_sum(UstateU, axis=1)
 
         return state
 
-    @property    
+    @property
     def choi(self):
         choi = tf.experimental.numpy.kron(self.U, tf.math.conj(self.U))
         return choi
 
 
 class KrausMap(Channel):
-
-    def __init__(self,
-                 d = None,
-                 rank = None,
-                 spam = None,
-                 trainable = True,
-                 generate = True,
-                 ):
+    def __init__(
+        self,
+        d=None,
+        rank=None,
+        spam=None,
+        trainable=True,
+        generate=True,
+    ):
 
         self.d = d
         self.rank = rank
 
         if spam is None:
-            spam = SPAM(d=d,
-                        init = init_ideal(d),
-                        povm = povm_ideal(d))
+            spam = SPAM(d=d, init=init_ideal(d), povm=povm_ideal(d))
         self.spam = spam
 
-        _, self.A, self.B = generate_ginibre(rank*d, d, trainable = trainable)
+        _, self.A, self.B = generate_ginibre(rank * d, d, trainable=trainable)
         self.parameter_list = [self.A, self.B]
 
         self.kraus = None
@@ -223,10 +221,9 @@ class KrausMap(Channel):
             self.generate_channel()
 
     def generate_channel(self):
-        G = tf.cast(self.A, dtype=precision) + 1j*tf.cast(self.B, dtype=precision)
+        G = tf.cast(self.A, dtype=precision) + 1j * tf.cast(self.B, dtype=precision)
         U = generate_unitary(G=G)
         self.kraus = tf.reshape(U, (1, self.rank, self.d, self.d))
-
 
     def apply_channel(self, state):
         state = tf.expand_dims(state, axis=1)
@@ -236,30 +233,32 @@ class KrausMap(Channel):
 
         return state
 
-    @property    
+    @property
     def choi(self):
         return kraus_to_choi(self)
 
 
 class DilutedKrausMap(KrausMap):
+    def __init__(
+        self,
+        U=None,
+        c=None,
+        d=None,
+        rank=None,
+        spam=None,
+        trainable=True,
+        generate=True,
+    ):
 
-    def __init__(self,
-                 U = None,
-                 c = None,
-                 d = None,
-                 rank = None,
-                 spam = None,
-                 trainable = True,
-                 generate = True,
-                 ):
-
-        KrausMap.__init__(self, d=d, rank=rank, spam=spam, trainable=trainable, generate=False)
+        KrausMap.__init__(
+            self, d=d, rank=rank, spam=spam, trainable=trainable, generate=False
+        )
 
         self.U = U
         if self.U is not None:
             self.U = tf.expand_dims(tf.expand_dims(self.U, 0), 0)
-            k = -np.log(1/c - 1)
-            self.k = tf.Variable(k, trainable = True)
+            k = -np.log(1 / c - 1)
+            self.k = tf.Variable(k, trainable=True)
             self.parameter_list.append(self.k)
         else:
             self.k = None
@@ -270,35 +269,38 @@ class DilutedKrausMap(KrausMap):
 
     def generate_channel(self):
         KrausMap.generate_channel(self)
-        
+
         if self.U is not None:
-            c = 1/(1 + tf.exp(-self.k))
-            c = tf.cast(c, dtype = precision)
-            self.kraus = tf.concat([tf.sqrt(c)*self.U, tf.sqrt(1-c)*self.kraus], axis=1)
+            c = 1 / (1 + tf.exp(-self.k))
+            c = tf.cast(c, dtype=precision)
+            self.kraus = tf.concat(
+                [tf.sqrt(c) * self.U, tf.sqrt(1 - c) * self.kraus], axis=1
+            )
 
     @property
     def c(self):
         if self.k is None:
             c = None
         else:
-            c = 1/(1 + tf.exp(-self.k))
+            c = 1 / (1 + tf.exp(-self.k))
         return c
 
 
-
 class ExtractedKrausMap(KrausMap):
+    def __init__(
+        self,
+        d=None,
+        rank=None,
+        spam=None,
+        trainable=True,
+        generate=True,
+    ):
 
-    def __init__(self,
-                 d = None,
-                 rank = None,
-                 spam = None,
-                 trainable = True,
-                 generate = True,
-                 ):
-
-        KrausMap.__init__(self, d=d, rank=rank-1, spam=spam, trainable=trainable, generate=False)
+        KrausMap.__init__(
+            self, d=d, rank=rank - 1, spam=spam, trainable=trainable, generate=False
+        )
         self.UnitaryMap = UnitaryMap(d=d, trainable=trainable, generate=False)
-        _, self.k, _      = generate_ginibre(1, 1, trainable = trainable, complex=False)
+        _, self.k, _ = generate_ginibre(1, 1, trainable=trainable, complex=False)
 
         self.parameter_list.extend(self.UnitaryMap.parameter_list)
         self.parameter_list.append(self.k)
@@ -311,31 +313,32 @@ class ExtractedKrausMap(KrausMap):
         KrausMap.generate_channel(self)
         self.UnitaryMap.generate_channel()
 
-        c = 1/(1 + tf.exp(-self.k))
-        c = tf.cast(c, dtype = precision)
-        self.kraus = tf.concat([tf.sqrt(c)*self.UnitaryMap.U, tf.sqrt(1-c)*self.kraus], axis=1)
+        c = 1 / (1 + tf.exp(-self.k))
+        c = tf.cast(c, dtype=precision)
+        self.kraus = tf.concat(
+            [tf.sqrt(c) * self.UnitaryMap.U, tf.sqrt(1 - c) * self.kraus], axis=1
+        )
 
     @property
     def c(self):
         if self.k is None:
             c = None
         else:
-            c = 1/(1 + tf.exp(-self.k))
+            c = 1 / (1 + tf.exp(-self.k))
         return c
 
 
-
 class SquaredKrausMap(KrausMap):
-    def __init__(self,
-                d = None,
-                rank = None,
-                spam = None,
-                trainable = True,
-                generate = True,
-                ):
+    def __init__(
+        self,
+        d=None,
+        rank=None,
+        spam=None,
+        trainable=True,
+        generate=True,
+    ):
 
-            KrausMap.__init__(d, rank, spam, trainable, generate=generate)
-
+        KrausMap.__init__(d, rank, spam, trainable, generate=generate)
 
     def apply_channel(self, state):
         state = KrausMap.apply_channel(state)
@@ -343,32 +346,30 @@ class SquaredKrausMap(KrausMap):
 
         return state
 
-    @property    
+    @property
     def choi(self):
         return channels_to_choi(self)
 
 
-class ChoiMap():
-
-    def __init__(self,
-                 d = None,
-                 rank = None,
-                 spam = None,
-                 trainable = True,
-                 generate = True,
-                 ):
+class ChoiMap:
+    def __init__(
+        self,
+        d=None,
+        rank=None,
+        spam=None,
+        trainable=True,
+        generate=True,
+    ):
 
         self.d = d
         self.rank = rank
-        self.I = tf.cast(tf.eye(self.d), dtype = precision)
+        self.I = tf.cast(tf.eye(self.d), dtype=precision)
 
         if spam is None:
-            spam = SPAM(d=d,
-                        init = init_ideal(d),
-                        povm = povm_ideal(d))
+            spam = SPAM(d=d, init=init_ideal(d), povm=povm_ideal(d))
         self.spam = spam
 
-        _, self.A, self.B = generate_ginibre(d**2, rank, trainable = trainable)
+        _, self.A, self.B = generate_ginibre(d**2, rank, trainable=trainable)
         self.parameter_list = [self.A, self.B]
 
         self.super_operator = None
@@ -376,16 +377,16 @@ class ChoiMap():
             self.generate_channel()
 
     def generate_channel(self):
-        G = self.A + 1j*self.B
-        
-        XX = tf.matmul(G, G, adjoint_b = True)
-        
+        G = self.A + 1j * self.B
+
+        XX = tf.matmul(G, G, adjoint_b=True)
+
         Y = partial_trace(XX)
         Y = tf.linalg.sqrtm(Y)
         Y = tf.linalg.inv(Y)
         Ykron = kron(self.I, Y)
 
-        choi = Ykron@XX@Ykron
+        choi = Ykron @ XX @ Ykron
         self.super_operator = reshuffle(choi)
 
     def apply_channel(self, state):
@@ -395,36 +396,32 @@ class ChoiMap():
 
         return state
 
-    @property    
+    @property
     def choi(self):
         return reshuffle(self.super_operator)
 
 
-
-class LindbladMap():
-
-    def __init__(self,
-                 d = None,
-                 rank = None,
-                 spam = None,
-                 trainable = True,
-                 generate = True,
-                 ):
+class LindbladMap:
+    def __init__(
+        self,
+        d=None,
+        rank=None,
+        spam=None,
+        trainable=True,
+        generate=True,
+    ):
 
         self.d = d
         self.rank = rank
-        self.I = tf.cast(tf.eye(d), dtype = precision)
+        self.I = tf.cast(tf.eye(d), dtype=precision)
 
         if spam is None:
-            spam = SPAM(d=d,
-                        init = init_ideal(d),
-                        povm = povm_ideal(d))
+            spam = SPAM(d=d, init=init_ideal(d), povm=povm_ideal(d))
         self.spam = spam
 
-        _, self.A, self.B = generate_ginibre(d, d, trainable = trainable)
-        _, self.C, self.D = generate_ginibre(d**2, rank-1, trainable = trainable)
-        _, self.a, _ = generate_ginibre(1, 1, trainable = trainable, complex=False)
-        
+        _, self.A, self.B = generate_ginibre(d, d, trainable=trainable)
+        _, self.C, self.D = generate_ginibre(d**2, rank - 1, trainable=trainable)
+        _, self.a, _ = generate_ginibre(1, 1, trainable=trainable, complex=False)
 
         self.parameter_list = [self.A, self.B, self.C, self.D, self.a]
 
@@ -433,17 +430,21 @@ class LindbladMap():
             self.generate_channel()
 
     def generate_channel(self):
-        G = tf.cast(self.A, dtype = precision) + 1j*tf.cast(self.B, dtype = precision)
-        H = (G + tf.linalg.adjoint(G))/2
+        G = tf.cast(self.A, dtype=precision) + 1j * tf.cast(self.B, dtype=precision)
+        H = (G + tf.linalg.adjoint(G)) / 2
 
-        G = tf.cast(self.C, dtype = precision) + 1j*tf.cast(self.D, dtype = precision)
-        choi = tf.matmul(G, G, adjoint_b = True)
+        G = tf.cast(self.C, dtype=precision) + 1j * tf.cast(self.D, dtype=precision)
+        choi = tf.matmul(G, G, adjoint_b=True)
         phi = reshuffle(choi)
         phi_star = partial_trace(choi)
-        expo = -1j*(kron(self.I, H) - kron(tf.transpose(H), self.I)) + phi - 0.5*(kron(tf.transpose(phi_star), self.I) + kron(self.I, phi_star))
-        
-        t = tf.cast(tf.abs(self.a), dtype = precision)
-        self.super_operator = tf.linalg.expm(t*expo)
+        expo = (
+            -1j * (kron(self.I, H) - kron(tf.transpose(H), self.I))
+            + phi
+            - 0.5 * (kron(tf.transpose(phi_star), self.I) + kron(self.I, phi_star))
+        )
+
+        t = tf.cast(tf.abs(self.a), dtype=precision)
+        self.super_operator = tf.linalg.expm(t * expo)
 
     def apply_channel(self, state):
         state = tf.reshape(state, (-1, d**2, 1))
@@ -452,11 +453,9 @@ class LindbladMap():
 
         return state
 
-    @property    
+    @property
     def choi(self):
         return reshuffle(self.super_operator)
-
-    
 
 
 """
@@ -535,4 +534,3 @@ class LindbladMap():
     def choi(self):
         return reshuffle(self.super_operator)
 """
-

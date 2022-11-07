@@ -19,11 +19,7 @@ from set_precision import *
 
 
 class Logger:
-    def __init__(self,
-                 sample_freq = 100,
-                 loss_function = None,
-                 verbose = True
-                ):
+    def __init__(self, sample_freq=100, loss_function=None, verbose=True):
         self.sample_freq = sample_freq
         self.loss_function = loss_function
         self.verbose = verbose
@@ -32,45 +28,56 @@ class Logger:
         self.loss_val_list = []
 
     def log(self, other, push=False):
-        if other.counter%self.sample_freq == 0 or push:
+        if other.counter % self.sample_freq == 0 or push:
             loss_train = None
-            loss_train = np.real(self.loss_function(other.channel, other.inputs, other.targets).numpy())
+            loss_train = np.real(
+                self.loss_function(other.channel, other.inputs, other.targets).numpy()
+            )
             self.loss_train_list.append(loss_train)
-            
+
             loss_val = None
             if other.targets_val != None:
-                loss_val = np.real(self.loss_function(other.channel, other.inputs_val, other.targets_val).numpy())
-            
+                loss_val = np.real(
+                    self.loss_function(
+                        other.channel, other.inputs_val, other.targets_val
+                    ).numpy()
+                )
+
             self.loss_val_list.append(loss_val)
             if self.verbose or push:
                 print(loss_train, loss_val)
 
 
 class ModelQuantumMap:
-
-    def __init__(self,
-                 channel = None,
-                 loss_function = None,
-                 optimizer = None,
-                 logger = None,
-                 ):
+    def __init__(
+        self,
+        channel=None,
+        loss_function=None,
+        optimizer=None,
+        logger=None,
+    ):
         self.channel = channel
         self.loss_function = loss_function
         self.optimizer = optimizer
+
+        if logger is None:
+            logger = Logger(loss_function=loss_function, verbose=False)
         self.logger = logger
 
         if not isinstance(self.loss_function, list):
             self.loss_function = [self.loss_function]
 
-#   @profile
-#   @tf.function
-    def train(self,
-              inputs = None,
-              targets = None,
-              inputs_val = None,
-              targets_val = None,
-              num_iter = 1000,
-              N = 0):
+    #   @profile
+    #   @tf.function
+    def train(
+        self,
+        inputs=None,
+        targets=None,
+        inputs_val=None,
+        targets_val=None,
+        num_iter=1000,
+        N=0,
+    ):
 
         self.inputs = inputs
         self.targets = targets
@@ -93,9 +100,9 @@ class ModelQuantumMap:
             with tf.GradientTape(watch_accessed_variables=False) as tape:
                 tape.watch(self.channel.parameter_list)
                 self.channel.generate_channel()
-                
+
                 loss = 0
-                for loss_function in self.loss_function: 
+                for loss_function in self.loss_function:
                     loss += loss_function(self.channel, inputs_batch, targets_batch)
 
             grads = tape.gradient(loss, self.channel.parameter_list)
@@ -104,10 +111,10 @@ class ModelQuantumMap:
             self.logger.log(self)
             self.counter += 1
 
-        self.logger.log(self)    
+        self.logger.log(self)
         self.channel.generate_channel()
-        self.logger.log(self, push=True)  
-    
+        self.logger.log(self, push=True)
+
     def zero_optimizer(self):
         for var in self.optimizer.variables():
             var.assign(tf.zeros_like(var))
@@ -116,4 +123,3 @@ class ModelQuantumMap:
         self.loss_function = loss_function
         if zero_optimizer:
             self.zero_optimizer()
-
