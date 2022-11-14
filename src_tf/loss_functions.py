@@ -159,10 +159,36 @@ class SpectrumDistance:
         )
 
         return sum
-
+    """
     def greedy_pair_distance(self, spectrum_a, spectrum_b):
         connections = []
         not_connected = len(spectrum_a) * [True]
+
+        for i, a in enumerate(spectrum_a):
+            min_dist = float("inf")
+            idx = 0
+            for j, b in enumerate(spectrum_b):
+                dist = tf.abs((a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2)
+                if (dist < min_dist) and not_connected[j]:
+
+                    min_dist = dist
+                    idx = j
+
+            not_connected[idx] = False
+            connections.append(idx)
+
+        return connections
+    """
+    
+    def greedy_pair_distance(self, spectrum_a, spectrum_b):
+        connections = []
+        not_connected = len(spectrum_a) * [True]
+
+        aa = tf.math.reduce_sum(spectrum_a * spectrum_a, axis=1, keepdims=True)
+        bb = tf.math.reduce_sum(spectrum_b * spectrum_b, axis=1, keepdims=True)
+        ab = tf.matmul(spectrum_a, spectrum_b, adjoint_b=True)
+
+        dist = aa - 2 * ab + tf.transpose(bb)
 
         for i, a in enumerate(spectrum_a):
             min_dist = float("inf")
@@ -317,4 +343,25 @@ class MininumEigenvalue:
         state = channel.apply_channel(state)
         eig, _ = tf.linalg.eigh(state)
         loss = tf.math.reduce_min(eig)
+        return loss[0]
+
+class MinimizeEigenvalues:
+    """Penalize sum of eigenvalues"""
+
+    def __call__(self, channel, input, target):
+        state = input[0]
+        state = channel.apply_channel(state)
+        eig, _ = tf.linalg.eigh(state)
+        loss = tf.math.reduce_sum(eig)
+        return loss[0]
+
+
+class MininumAverageEigenvalue:
+    """Penalize large average eigenvalue"""
+
+    def __call__(self, channel, input, target):
+        state = input[0]
+        state = channel.apply_channel(state)
+        eig, _ = tf.linalg.eigh(state)
+        loss = tf.math.reduce_mean(eig)
         return loss[0]

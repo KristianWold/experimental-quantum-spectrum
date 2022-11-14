@@ -111,7 +111,6 @@ class ModelQuantumMap:
             self.logger.log(self)
             self.counter += 1
 
-        self.logger.log(self)
         self.channel.generate_channel()
         self.logger.log(self, push=True)
 
@@ -121,5 +120,7 @@ class ModelQuantumMap:
 
     def set_loss_function(self, loss_function, zero_optimizer=True):
         self.loss_function = loss_function
+        if not isinstance(self.loss_function, list):
+            self.loss_function = [self.loss_function]
         if zero_optimizer:
             self.zero_optimizer()
