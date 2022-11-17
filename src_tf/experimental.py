@@ -48,7 +48,7 @@ def prepare_input(config, return_mode="density"):
 
 def prepare_input_entangled(config, return_mode="density"):
     """0 = |0>, 1 = |1>, 2 = |+>, 3 = |->, 4 = |i+>, 5 = |i+>"""
-    n = len(config)-1
+    n = len(config) - 1
     circuit = qk.QuantumCircuit(n)
     for i, gate in enumerate(config[:-1]):
         if gate == 0:
@@ -63,13 +63,13 @@ def prepare_input_entangled(config, return_mode="density"):
             circuit.rx(-np.pi / 2, i)
         if gate == 5:
             circuit.rx(np.pi / 2, i)
-    
+
     cnot_position = config[-1]
-    if cnot_position//(n-1) != 0:
-        cnot_position = cnot_position%(n-1)
-        circuit.cx(cnot_position+1, cnot_position)
+    if cnot_position // (n - 1) != 0:
+        cnot_position = cnot_position % (n - 1)
+        circuit.cx(cnot_position + 1, cnot_position)
     else:
-        circuit.cx(cnot_position, cnot_position+1)
+        circuit.cx(cnot_position, cnot_position + 1)
 
     if return_mode == "density":
         state = DensityMatrix(circuit.reverse_bits()).data
@@ -114,9 +114,6 @@ def pauli_observable(config, return_mode="density"):
         if index == 2:
             pass  # measure in computational basis
 
-
-    
-
     if return_mode == "circuit":
         circuit.measure(q_reg, c_reg)
         result = circuit.reverse_bits()
@@ -137,7 +134,7 @@ def pauli_observable(config, return_mode="density"):
 
 def pauli_observable_entangled(config, return_mode="density"):
 
-    n = len(config)-1
+    n = len(config) - 1
     X = np.array([[0, 1], [1, 0]])
     Y = np.array([[0, -1j], [1j, 0]])
     Z = np.array([[1, 0], [0, -1]])
@@ -154,11 +151,11 @@ def pauli_observable_entangled(config, return_mode="density"):
     circuit = qk.QuantumCircuit(q_reg, c_reg)
 
     cnot_position = config[-1]
-    if cnot_position//(n-1) == 0:
-        circuit.cx(cnot_position, cnot_position+1)
+    if cnot_position // (n - 1) == 0:
+        circuit.cx(cnot_position, cnot_position + 1)
     else:
-        cnot_position = cnot_position%(n-1)
-        circuit.cx(cnot_position+1, cnot_position)
+        cnot_position = cnot_position % (n - 1)
+        circuit.cx(cnot_position + 1, cnot_position)
 
     for i, index in enumerate(config[:-1]):
         if index == 0:
@@ -186,7 +183,6 @@ def pauli_observable_entangled(config, return_mode="density"):
         result = [Operator(circuit.reverse_bits()).data, observable]
 
     return result
-
 
 
 def generate_pauli_circuits(n=None, circuit_target=None, N=None, trace=False):
@@ -242,11 +238,11 @@ def generate_pauli_circuits_entangled(n=None, circuit_target=None, N=None, trace
     for i, j in zip(state_index, observ_index):
 
         config1 = numberToBase(i, 6, n)
-        config1.append(np.random.randint(0, 2*(n-1)))
+        config1.append(np.random.randint(0, 2 * (n - 1)))
         U_prep = prepare_input_entangled(config1, return_mode="unitary")
 
         config2 = numberToBase(j, num_observ, n)
-        config2.append(np.random.randint(0, 2*(n-1)))
+        config2.append(np.random.randint(0, 2 * (n - 1)))
         U_basis, _ = pauli_observable_entangled(config2, return_mode="unitary")
 
         input_list[0].append(U_prep)
@@ -254,7 +250,9 @@ def generate_pauli_circuits_entangled(n=None, circuit_target=None, N=None, trace
 
         if circuit_target is not None:
             state_circuit = prepare_input_entangled(config1, return_mode="circuit")
-            observable_circuit = pauli_observable_entangled(config2, return_mode="circuit")
+            observable_circuit = pauli_observable_entangled(
+                config2, return_mode="circuit"
+            )
 
             circuit = state_circuit
             circuit.barrier()
@@ -271,9 +269,12 @@ def generate_pauli_circuits_entangled(n=None, circuit_target=None, N=None, trace
     return input_list, circuit_list
 
 
-def generate_pauliInput_circuits(n=None):
+def generate_pauliInput_circuits(n=None, N=None):
     input_list = []
     circuit_list = []
+    if N is None:
+        N = 6**n
+
     for i in range(6**n):
 
         config = numberToBase(i, 6, n)
@@ -283,9 +284,13 @@ def generate_pauliInput_circuits(n=None):
         input_list.append(U_prep)
         circuit_list.append(circuit)
 
-    input_list = tf.convert_to_tensor(input_list, dtype=precision)
+    combined_list = list(zip(input_list, circuit_list))
+    random.shuffle(combined_list)
+    input_list, circuit_list = zip(*combined_list)
 
-    return input_list, circuit_list
+    input_list = tf.convert_to_tensor(input_list, dtype=precision)
+    circuit_list = list(circuit_list)
+    return input_list[:N], circuit_list[:N]
 
 
 def generate_bitstring_circuits(n):

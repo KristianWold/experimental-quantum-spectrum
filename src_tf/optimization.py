@@ -30,9 +30,9 @@ class Logger:
     def log(self, other, push=False):
         if other.counter % self.sample_freq == 0 or push:
             loss_train = None
-            loss_train = np.real(
-                self.loss_function(other.channel, other.inputs, other.targets).numpy()
-            )
+            # loss_train = np.real(
+            #    self.loss_function(other.channel, other.inputs, other.targets).numpy()
+            # )
             self.loss_train_list.append(loss_train)
 
             loss_val = None

@@ -221,7 +221,7 @@ class KrausMap(Channel):
             self.generate_channel()
 
     def generate_channel(self):
-        G = tf.cast(self.A, dtype=precision) + 1j * tf.cast(self.B, dtype=precision)
+        G = tf.complex(self.A, self.B)
         U = generate_unitary(G=G)
         self.kraus = tf.reshape(U, (1, self.rank, self.d, self.d))
 
@@ -284,6 +284,59 @@ class DilutedKrausMap(KrausMap):
         else:
             c = 1 / (1 + tf.exp(-self.k))
         return c
+
+    @property
+    def choi(self):
+        return kraus_to_choi(self)
+
+
+class TimeDependentKrausMap(Channel):
+    def __init__(
+        self,
+        d=None,
+        rank=None,
+        spam=None,
+        trainable=True,
+        generate=True,
+    ):
+
+        self.d = d
+        self.rank = rank
+
+        if spam is None:
+            spam = SPAM(d=d, init=init_ideal(d), povm=povm_ideal(d))
+        self.spam = spam
+
+        _, self.A, self.B = generate_ginibre(rank * d, d, trainable=trainable)
+        _, self.A_t, self.B_t = generate_ginibre(
+            rank * d, rank * d, trainable=trainable, complex=False
+        )
+        self.parameter_list = [self.A, self.B, self.A_t, self.B_t]
+
+        self.kraus = None
+        if generate:
+            self.generate_channel()
+
+    def generate_channel(self, t=0):
+        G = tf.cast(self.A, dtype=precision) + 1j * tf.cast(self.B, dtype=precision)
+        G_t = t * (
+            tf.cast(self.A_t, dtype=precision) + 1j * tf.cast(self.B_t, dtype=precision)
+        ) + tf.cast(tf.eye(self.rank * self.d), dtype=precision)
+        G = G_t @ G
+        U = generate_unitary(G=G)
+        self.kraus = tf.reshape(U, (1, self.rank, self.d, self.d))
+
+    def apply_channel(self, state):
+        state = tf.expand_dims(state, axis=1)
+        Kstate = tf.matmul(self.kraus, state)
+        KstateK = tf.matmul(Kstate, self.kraus, adjoint_b=True)
+        state = tf.reduce_sum(KstateK, axis=1)
+
+        return state
+
+    @property
+    def choi(self):
+        return kraus_to_choi(self)
 
 
 class ExtractedKrausMap(KrausMap):
@@ -401,7 +454,7 @@ class ChoiMap:
         return reshuffle(self.super_operator)
 
 
-class LindbladMap:
+class CompactLindbladMap(Channel):
     def __init__(
         self,
         d=None,
@@ -431,7 +484,7 @@ class LindbladMap:
 
     def generate_channel(self):
         G = tf.cast(self.A, dtype=precision) + 1j * tf.cast(self.B, dtype=precision)
-        H = (G + tf.linalg.adjoint(G)) / 2
+        H = 100 * (G + tf.linalg.adjoint(G)) / 2
 
         G = tf.cast(self.C, dtype=precision) + 1j * tf.cast(self.D, dtype=precision)
         choi = tf.matmul(G, G, adjoint_b=True)
@@ -444,12 +497,12 @@ class LindbladMap:
         )
 
         t = tf.cast(tf.abs(self.a), dtype=precision)
-        self.super_operator = tf.linalg.expm(t * expo)
+        self.super_operator = tf.linalg.expm(0.001 * expo)
 
     def apply_channel(self, state):
-        state = tf.reshape(state, (-1, d**2, 1))
+        state = tf.reshape(state, (-1, self.d**2, 1))
         state = tf.matmul(self.super_operator, state)
-        state = tf.reshape(state, (-1, d, d))
+        state = tf.reshape(state, (-1, self.d, self.d))
 
         return state
 
@@ -458,70 +511,58 @@ class LindbladMap:
         return reshuffle(self.super_operator)
 
 
-"""
-class LindbladMap():
-
-    def __init__(self,
-                 d = None,
-                 rank = None,
-                 spam = None,
-                 trainable = True,
-                 generate = True,
-                 ):
+class ExplicitLindbladMap(Channel):
+    def __init__(
+        self,
+        d=None,
+        rank=None,
+        spam=None,
+        trainable=True,
+        generate=True,
+    ):
 
         self.d = d
         self.rank = rank
-        self.I = tf.cast(tf.eye(d), dtype = precision)
+        self.I = tf.cast(tf.eye(d), dtype=precision)
 
         if spam is None:
-            spam = SPAM(d=d,
-                        init = init_ideal(d),
-                        povm = povm_ideal(d))
+            spam = SPAM(d=d, init=init_ideal(d), povm=povm_ideal(d))
         self.spam = spam
 
-        _, A, B = generate_ginibre(d, d, trainable = trainable)
-        self.H_params = [A, B]
-        _, A, _ = generate_ginibre(rank-1, 1, trainable = trainable, complex=False)
-        self.gamma_params = [A]
+        _, A, B = generate_ginibre(d, d, trainable=trainable)
+        self.H_params = [tf.cast(A, dtype=tf.double), tf.cast(B, dtype=tf.double)]
+        _, A, _ = generate_ginibre(rank - 1, 1, trainable=trainable, complex=False)
+        self.gamma_params = [tf.cast(A, dtype=tf.double)]
 
         self.A_list = []
         self.B_list = []
-        for i in range(rank-1):
-            _, A, B = generate_ginibre(d, d, trainable = trainable)
-            self.A_list.append(A)
-            self.B_list.append(B)
+        for i in range(rank - 1):
+            _, A, B = generate_ginibre(d, d, trainable=trainable)
+            self.A_list.append(tf.cast(A, dtype=tf.double))
+            self.B_list.append(tf.cast(B, dtype=tf.double))
 
-        self.parameter_list = self.H_params + self.gamma_params + self.A_list + self.B_list
+        self.parameter_list = (
+            self.H_params + self.gamma_params + self.A_list + self.B_list
+        )
 
         self.super_operator = None
         if generate:
             self.generate_channel()
 
     def generate_channel(self):
-        G = tf.cast(self.H_params[0], dtype=precision) +1j*tf.cast(self.H_params[1], dtype=precision)
-        H = G + tf.linalg.adjoint(G)
-        gamma = tf.cast(tf.abs(self.gamma_params[0]), dtype = precision)
+        H = self.generate_hamiltonian()
+        weights = self.generate_weights()
+        L_list = self.generate_jump_operators()
 
-        L_list = [tf.cast(A, dtype=precision) + 1j*tf.cast(B, dtype=precision) for A,B in zip(self.A_list, self.B_list)]
-        
-        ab = tf.linalg.trace(tf.matmul(self.I/np.sqrt(self.d), L_list[0], adjoint_a=True))
-        L_list[0] = (L_list[0] -  ab*self.I/np.sqrt(self.d))
-        L_list[0] = L_list[0]/tf.math.sqrt(tf.linalg.trace(tf.matmul(L_list[0], L_list[0], adjoint_a=True)))
-
-        for i in range(1, len(L_list)):
-            for j in range(i):
-                ab = tf.linalg.trace(tf.matmul(L_list[j], L_list[i], adjoint_a=True))
-                L_list[i] += -ab*L_list[j]
-
-            L_list[i] = L_list[i]/tf.math.sqrt(tf.linalg.trace(tf.matmul(L_list[i], L_list[i], adjoint_a=True)))
-        
-        LB = -1j*(kron(H, self.I) - kron(self.I, tf.math.conj(H)))
+        generator = -1j * (kron(H, self.I) - kron(self.I, tf.math.conj(H)))
         for i, L in enumerate(L_list):
             L2 = tf.matmul(L, L, adjoint_a=True)
-            LB += gamma[i]*(kron(L, tf.math.conj(L)) - 0.5*((kron(L2, self.I) + kron(self.I, tf.math.conj(L2)))))
-        
-        self.super_operator = tf.linalg.expm(LB)
-        
+            generator += weights[i] * (
+                kron(L, tf.math.conj(L))
+                - 0.5 * ((kron(L2, self.I) + kron(self.I, tf.math.conj(L2))))
+            )
+
+        self.super_operator = tf.linalg.expm(generator)
 
     def apply_channel(self, state):
         state = tf.reshape(state, (-1, d**2, 1))
@@ -530,7 +571,37 @@ class LindbladMap():
 
         return state
 
-    @property    
+    def generate_hamiltonian(self):
+        G = tf.complex(self.H_params[0], self.H_params[1])
+        H = G + tf.linalg.adjoint(G)
+        return H
+
+    def generate_weights(self):
+        weights = tf.cast(tf.abs(self.gamma_params[0]), dtype=precision)
+        return weights
+
+    def generate_jump_operators(self):
+        L_list = [tf.complex(A, B) for A, B in zip(self.A_list, self.B_list)]
+
+        ab = tf.linalg.trace(
+            tf.matmul(self.I / np.sqrt(self.d), L_list[0], adjoint_a=True)
+        )
+        L_list[0] = L_list[0] - ab * self.I / np.sqrt(self.d)
+        L_list[0] = L_list[0] / tf.math.sqrt(
+            tf.linalg.trace(tf.matmul(L_list[0], L_list[0], adjoint_a=True))
+        )
+
+        for i in range(1, len(L_list)):
+            for j in range(i):
+                ab = tf.linalg.trace(tf.matmul(L_list[j], L_list[i], adjoint_a=True))
+                L_list[i] += -ab * L_list[j]
+
+            L_list[i] = L_list[i] / tf.math.sqrt(
+                tf.linalg.trace(tf.matmul(L_list[i], L_list[i], adjoint_a=True))
+            )
+
+        return L_list
+
+    @property
     def choi(self):
         return reshuffle(self.super_operator)
-"""

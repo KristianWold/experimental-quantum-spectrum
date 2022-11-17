@@ -54,9 +54,10 @@ def expectation_value(probs, observable):
 
 # @profile
 def generate_ginibre(dim1, dim2, trainable=False, complex=True):
-    A = tf.random.normal((dim1, dim2), 0, 1)
+    A = tf.random.normal((dim1, dim2), 0, 1, dtype=tf.float64)
+
     if complex:
-        B = tf.random.normal((dim1, dim2), 0, 1)
+        B = tf.random.normal((dim1, dim2), 0, 1, dtype=tf.float64)
     else:
         B = None
     if trainable:

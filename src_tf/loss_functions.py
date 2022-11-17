@@ -159,6 +159,7 @@ class SpectrumDistance:
         )
 
         return sum
+
     """
     def greedy_pair_distance(self, spectrum_a, spectrum_b):
         connections = []
@@ -179,7 +180,7 @@ class SpectrumDistance:
 
         return connections
     """
-    
+
     def greedy_pair_distance(self, spectrum_a, spectrum_b):
         connections = []
         not_connected = len(spectrum_a) * [True]
@@ -344,6 +345,7 @@ class MininumEigenvalue:
         eig, _ = tf.linalg.eigh(state)
         loss = tf.math.reduce_min(eig)
         return loss[0]
+
 
 class MinimizeEigenvalues:
     """Penalize sum of eigenvalues"""
