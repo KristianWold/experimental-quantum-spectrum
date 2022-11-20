@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import multiprocessing as mp
 import random
 import tensorflow as tf
+import pickle
 from set_precision import *
 
 from qiskit.quantum_info import DensityMatrix
@@ -65,3 +66,13 @@ def train_val_split(inputs, targets, ratio=0.9):
 
 def average_tensors(tensor_list):
     pass
+
+
+def saver(object, filename):
+    pickle.dump(object, open(filename, "wb"))
+
+
+def loader(filename):
+    object = pickle.load(open(filename, "rb"))
+
+    return object

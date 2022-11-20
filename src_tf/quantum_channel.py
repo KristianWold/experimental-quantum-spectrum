@@ -459,6 +459,8 @@ class CompactLindbladMap(Channel):
         self,
         d=None,
         rank=None,
+        alpha=1,
+        beta=1,
         spam=None,
         trainable=True,
         generate=True,
@@ -466,6 +468,11 @@ class CompactLindbladMap(Channel):
 
         self.d = d
         self.rank = rank
+        self.alpha = alpha
+        self.beta = beta
+
+        self.n = int(np.log2(d))
+
         self.I = tf.cast(tf.eye(d), dtype=precision)
 
         if spam is None:
@@ -484,20 +491,19 @@ class CompactLindbladMap(Channel):
 
     def generate_channel(self):
         G = tf.cast(self.A, dtype=precision) + 1j * tf.cast(self.B, dtype=precision)
-        H = 100 * (G + tf.linalg.adjoint(G)) / 2
+        H = (G + tf.linalg.adjoint(G)) / 2
 
         G = tf.cast(self.C, dtype=precision) + 1j * tf.cast(self.D, dtype=precision)
         choi = tf.matmul(G, G, adjoint_b=True)
         phi = reshuffle(choi)
         phi_star = partial_trace(choi)
         expo = (
-            -1j * (kron(self.I, H) - kron(tf.transpose(H), self.I))
+            -1j * self.alpha * (kron(self.I, H) - kron(tf.transpose(H), self.I))
             + phi
             - 0.5 * (kron(tf.transpose(phi_star), self.I) + kron(self.I, phi_star))
         )
 
-        t = tf.cast(tf.abs(self.a), dtype=precision)
-        self.super_operator = tf.linalg.expm(0.001 * expo)
+        self.super_operator = tf.linalg.expm(self.beta * expo)
 
     def apply_channel(self, state):
         state = tf.reshape(state, (-1, self.d**2, 1))

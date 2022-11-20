@@ -103,6 +103,7 @@ class SPAM:
 
         self.d = d
         self.use_corr_mat = use_corr_mat
+        self.n = int(np.log2(d))
 
         self.parameter_list = []
         if init is "random":
@@ -187,7 +188,7 @@ class SPAM:
 
     def pretrain(self, num_iter, targets, verbose=True):
         init_target, povm_target = targets
-        for step in tqdm(range(num_iter)):
+        for step in range(num_iter):
 
             with tf.GradientTape() as tape:
                 self.generate_SPAM()
@@ -198,7 +199,6 @@ class SPAM:
             grads = tape.gradient(loss, self.parameter_list)
             self.optimizer.apply_gradients(zip(grads, self.parameter_list))
 
-        print(np.abs(loss.numpy()))
         self.generate_SPAM()
         for var in self.optimizer.variables():
             var.assign(tf.zeros_like(var))

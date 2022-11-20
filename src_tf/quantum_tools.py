@@ -174,9 +174,9 @@ def measurement(state, U_basis=None, povm=None):
     return probs
 
 
-def add_noise_to_probs(tensor, sigma=0.01):
+def add_noise_to_probs(tensor, noise=0.01):
     tensor = tensor + tf.math.sqrt(tensor * (1 - tensor)) * tf.cast(
-        tf.random.normal(tensor.shape, 0, sigma), dtype=precision
+        tf.random.normal(tensor.shape, 0, noise), dtype=precision
     )
     tensor = tensor / tf.math.reduce_sum(tensor, axis=1, keepdims=True)
 
