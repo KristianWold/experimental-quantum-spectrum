@@ -41,13 +41,18 @@ class ProbabilityMSE:
 
     def __call__(self, channel, input, target):
         N = target.shape[0]
-        d = channel.spam.init.shape[0]
-        U_prep, U_basis = input
+        d = channel.spam.d
+        if isinstance(input, list):
+            U_prep, U_basis = input
+        else:
+            U_prep = input
+            U_basis = None
+        
 
-        state = tf.repeat(tf.expand_dims(channel.spam.init, axis=0), N, axis=0)
+        state = tf.repeat(tf.expand_dims(channel.spam.init.init, axis=0), N, axis=0)
         state = apply_unitary(state, U_prep)
         state = channel.apply_channel(state)
-        output = measurement(state, U_basis, channel.spam.povm)
+        output = measurement(state, U_basis, channel.spam.povm.povm)
         loss = d**2 * tf.math.reduce_mean((output - target) ** 2)
 
         return loss
@@ -61,17 +66,16 @@ class KLDiv:
         d = channel.spam.init.shape[0]
         U_prep, U_basis = input
 
-        state = tf.repeat(tf.expand_dims(channel.spam.init, axis=0), N, axis=0)
+        state = tf.repeat(tf.expand_dims(channel.spam.init.init, axis=0), N, axis=0)
         state = apply_unitary(state, U_prep)
         state = channel.apply_channel(state)
-        output = measurement(state, U_basis, channel.spam.povm)
+        output = measurement(state, U_basis, channel.spam.povm.povm)
         loss = tf.math.reduce_sum(target * tf.math.log((target + 1e-32) / output))
 
         return loss
-
+    
 
 class LogLikelihood:
-    """Log-likelihood loss over measured computational basis probabilities"""
 
     def __call__(self, channel, input, target):
         N = target.shape[0]

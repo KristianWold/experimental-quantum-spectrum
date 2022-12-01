@@ -163,10 +163,10 @@ def measurement(state, U_basis=None, povm=None):
     if povm is None:
         povm = corr_mat_to_povm(np.eye(d))
 
-    Ustate = tf.matmul(U_basis, state)
-    UstateU = tf.matmul(Ustate, U_basis, adjoint_b=True)
+    if U_basis is not None:
+        state = apply_unitary(state, U_basis)
 
-    state = tf.expand_dims(UstateU, axis=1)
+    state = tf.expand_dims(state, axis=1)
     povm = tf.expand_dims(povm, axis=0)
 
     probs = tf.linalg.trace(state @ povm)

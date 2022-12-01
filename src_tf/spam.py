@@ -49,22 +49,57 @@ def init_ideal(d):
 
 
 def povm_ideal(d):
-    povm = corr_mat_to_povm(np.eye(d))
+    povm = tf.cast(corr_mat_to_povm(np.eye(d)), dtype=precision)
     return povm
 
 
-class POVM:
-    def __init__(self, d, optimizer, trainable=True):
+class InitialState:
+    def __init__(self, d, c = 0.9, trainable=True):
         self.d = d
-        self.A = tf.cast(tf.random.normal((d, d, d), 0, 1), dtype=precision)
-        self.B = tf.cast(tf.random.normal((d, d, d), 0, 1), dtype=precision)
+
+        self.A = tf.cast(tf.random.normal((d, d), 0, 1), dtype=precision)
+        self.B = tf.cast(tf.random.normal((d, d), 0, 1), dtype=precision)
+        self.init_ideal = init_ideal(d)
 
         if trainable:
             self.A = tf.Variable(self.A, trainable=True)
             self.B = tf.Variable(self.B, trainable=True)
 
         self.parameter_list = [self.A, self.B]
-        self.optimizer = optimizer
+
+        k = -np.log(1 / c - 1)
+        self.k = tf.Variable(k, trainable=True)
+        self.parameter_list.append(self.k)
+
+        self.generate_init()
+
+    def generate_init(self):
+        G = self.A + 1j * self.B
+        AA = tf.matmul(G, G, adjoint_b=True)
+        self.init = AA/tf.linalg.trace(AA)
+        self.init = self.c * self.init + (1 - self.c) * self.init_ideal
+
+    @property
+    def c(self):
+        return tf.cast(1 / (1 + tf.exp(-self.k)),dtype=precision)
+
+
+class POVM:
+    def __init__(self, d, c = 0.9, trainable=True):
+        self.d = d
+        self.A = tf.cast(tf.random.normal((d, d, d), 0, 1), dtype=precision)
+        self.B = tf.cast(tf.random.normal((d, d, d), 0, 1), dtype=precision)
+        self.povm_ideal = povm_ideal(d)
+
+        if trainable:
+            self.A = tf.Variable(self.A, trainable=True)
+            self.B = tf.Variable(self.B, trainable=True)
+
+        self.parameter_list = [self.A, self.B]
+
+        k = -np.log(1 / c - 1)
+        self.k = tf.Variable(k, trainable=True)
+        self.parameter_list.append(self.k)
 
         self.generate_POVM()
 
@@ -74,87 +109,26 @@ class POVM:
         D = tf.math.reduce_sum(AA, axis=0)
         invsqrtD = tf.linalg.inv(tf.linalg.sqrtm(D))
         self.povm = tf.matmul(tf.matmul(invsqrtD, AA), invsqrtD)
+        self.povm = self.c*self.povm_ideal + (1-self.c)*self.povm
 
-    def train(self, num_iter, inputs, targets, N=1):
-        indices = tf.range(targets.shape[0])
-
-        for step in tqdm(range(num_iter)):
-            batch = tf.random.shuffle(indices)[:N]
-            inputs_batch = tf.gather(inputs, batch, axis=0)
-            targets_batch = tf.gather(targets, batch, axis=0)
-
-            with tf.GradientTape() as tape:
-                self.generate_POVM()
-                outputs = measurement(inputs_batch, povm=self.povm)
-
-                loss = self.d**2 * tf.math.reduce_mean((outputs - targets_batch) ** 2)
-
-            grads = tape.gradient(loss, self.parameter_list)
-            self.optimizer.apply_gradients(zip(grads, self.parameter_list))
-            print(step, np.abs(loss.numpy()))
-
-        self.generate_POVM()
+    @property
+    def c(self):
+        return tf.cast(1 / (1 + tf.exp(-self.k)),dtype=precision)
 
 
 class SPAM:
     def __init__(
-        self, d=None, init="random", povm="random", use_corr_mat=False, optimizer=None
+        self, init = None, povm = None, loss_function = None, optimizer=None
     ):
 
-        self.d = d
-        self.use_corr_mat = use_corr_mat
-        self.n = int(np.log2(d))
+        self.d = init.d
+        self.init = init
+        self.povm = povm
 
-        self.parameter_list = []
-        if init is "random":
-            self.A = tf.Variable(
-                tf.cast(tf.random.normal((d, d), 0, 1), dtype=precision)
-            )
-            self.B = tf.Variable(
-                tf.cast(tf.random.normal((d, d), 0, 1), dtype=precision)
-            )
-            self.parameter_list.extend([self.A, self.B])
-        elif init is "ideal":
-            self.A = np.zeros((d, d))
-            self.A[0, 0] = 1
-            self.A = tf.Variable(tf.cast(self.A, dtype=precision))
-            self.B = tf.Variable(tf.zeros_like(self.A, dtype=precision))
-            self.parameter_list.extend([self.A, self.B])
-        else:
-            self.A = self.B = None
-            self.init = init
-
-        if povm is "random":
-            if not use_corr_mat:
-                self.C = tf.Variable(
-                    tf.cast(tf.random.normal((d, d, d), 0, 1), dtype=precision)
-                )
-                self.D = tf.Variable(
-                    tf.cast(tf.random.normal((d, d, d), 0, 1), dtype=precision)
-                )
-                self.parameter_list.extend([self.C, self.D])
-            else:
-                self.C = tf.Variable(
-                    tf.cast(tf.random.normal((d, d), 0, 1), dtype=precision)
-                )
-                self.parameter_list.extend([self.C])
-        elif povm is "ideal":
-            if not use_corr_mat:
-                self.C = np.zeros((d, d, d))
-                for i in range(d):
-                    self.C[i, i, i] = 1
-                self.C = tf.Variable(tf.cast(self.C, dtype=precision))
-                self.D = tf.Variable(tf.zeros_like(self.C, dtype=precision))
-                self.parameter_list.extend([self.C, self.D])
-            else:
-                self.C = tf.Variable(tf.cast(tf.eye(d), dtype=precision))
-                self.parameter_list.extend([self.C])
-
-        else:
-            self.C = self.D = None
-            self.povm = povm
-
+        self.loss_function = loss_function
         self.optimizer = optimizer
+        self.parameter_list = self.init.parameter_list + self.povm.parameter_list
+
         self.generate_SPAM()
 
     def train(self, num_iter, inputs, targets, N=None, verbose=True):
@@ -170,13 +144,9 @@ class SPAM:
             with tf.GradientTape(watch_accessed_variables=False) as tape:
                 tape.watch(self.parameter_list)
                 self.generate_SPAM()
-                outputs = measurement(
-                    tf.repeat(self.init[None, :, :], N, axis=0),
-                    U_basis=inputs_batch,
-                    povm=self.povm,
-                )
-
-                loss = self.d**2 * tf.math.reduce_mean((outputs - targets_batch) ** 2)
+                inputs_batch = apply_unitary(self.init.init, inputs_batch)
+                output_batch = measurement(inputs_batch, povm = self.povm.povm)
+                loss = tf.math.reduce_mean((targets_batch - output_batch)**2)
 
             grads = tape.gradient(loss, self.parameter_list)
             self.optimizer.apply_gradients(zip(grads, self.parameter_list))
@@ -186,46 +156,7 @@ class SPAM:
 
         self.generate_SPAM()
 
-    def pretrain(self, num_iter, targets, verbose=True):
-        init_target, povm_target = targets
-        for step in range(num_iter):
-
-            with tf.GradientTape() as tape:
-                self.generate_SPAM()
-                loss1 = tf.reduce_mean(tf.abs(self.init - init_target) ** 2)
-                loss2 = tf.reduce_mean(tf.abs(self.povm - povm_target) ** 2)
-                loss = loss1 + loss2
-
-            grads = tape.gradient(loss, self.parameter_list)
-            self.optimizer.apply_gradients(zip(grads, self.parameter_list))
-
-        self.generate_SPAM()
-        for var in self.optimizer.variables():
-            var.assign(tf.zeros_like(var))
-
     def generate_SPAM(self):
-        if self.A is not None:
-            self.generate_init()
+        self.init.generate_init()
+        self.povm.generate_POVM()
 
-        if self.C is not None:
-            self.generate_POVM()
-
-    def generate_init(self):
-        X = self.A + 1j * self.B
-        XX = tf.matmul(X, X, adjoint_b=True)
-        state = XX / tf.linalg.trace(XX)
-        self.init = state
-
-    def generate_POVM(self):
-        if not self.use_corr_mat:
-            X = self.C + 1j * self.D
-            XX = tf.matmul(X, X, adjoint_b=True)
-            D = tf.math.reduce_sum(XX, axis=0)
-            invsqrtD = tf.linalg.inv(tf.linalg.sqrtm(D))
-            self.povm = tf.matmul(tf.matmul(invsqrtD, XX), invsqrtD)
-
-        else:
-            X = tf.abs(self.C)
-            X = X / tf.reduce_sum(X, axis=1)
-            corr_mat = tf.transpose(X)
-            self.povm = corr_mat_to_povm(corr_mat)

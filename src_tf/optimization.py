@@ -19,9 +19,14 @@ from set_precision import *
 
 
 class Logger:
-    def __init__(self, sample_freq=100, loss_function=None, verbose=True):
+    def __init__(self, sample_freq=100, loss_function=None, loss_function_val=None, verbose=True):
         self.sample_freq = sample_freq
         self.loss_function = loss_function
+        
+        if loss_function_val is None:
+            loss_function_val = loss_function
+        self.loss_function_val = loss_function_val
+
         self.verbose = verbose
 
         self.loss_train_list = []
@@ -30,15 +35,15 @@ class Logger:
     def log(self, other, push=False):
         if other.counter % self.sample_freq == 0 or push:
             loss_train = None
-            # loss_train = np.real(
-            #    self.loss_function(other.channel, other.inputs, other.targets).numpy()
-            # )
+            loss_train = np.real(
+                self.loss_function(other.channel, other.inputs, other.targets).numpy()
+             )
             self.loss_train_list.append(loss_train)
 
             loss_val = None
             if other.targets_val != None:
                 loss_val = np.real(
-                    self.loss_function(
+                    self.loss_function_val(
                         other.channel, other.inputs_val, other.targets_val
                     ).numpy()
                 )

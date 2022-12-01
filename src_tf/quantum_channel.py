@@ -476,7 +476,7 @@ class CompactLindbladMap(Channel):
         self.I = tf.cast(tf.eye(d), dtype=precision)
 
         if spam is None:
-            spam = SPAM(d=d, init=init_ideal(d), povm=povm_ideal(d))
+            spam = SPAM(init=InitialState(d, c=0.99999), povm=POVM(d, c=0.99999))
         self.spam = spam
 
         _, self.A, self.B = generate_ginibre(d, d, trainable=trainable)
