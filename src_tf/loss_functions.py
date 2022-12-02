@@ -63,7 +63,7 @@ class KLDiv:
 
     def __call__(self, channel, input, target):
         N = target.shape[0]
-        d = channel.spam.init.shape[0]
+        
         U_prep, U_basis = input
 
         state = tf.repeat(tf.expand_dims(channel.spam.init.init, axis=0), N, axis=0)

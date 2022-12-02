@@ -67,9 +67,12 @@ class InitialState:
 
         self.parameter_list = [self.A, self.B]
 
-        k = -np.log(1 / c - 1)
-        self.k = tf.Variable(k, trainable=True)
-        self.parameter_list.append(self.k)
+        if c is None:
+            self.k = None
+        else:
+            k = -np.log(1 / c - 1)
+            self.k = tf.Variable(k, trainable=True)
+            self.parameter_list.append(self.k)
 
         self.generate_init()
 
@@ -77,7 +80,9 @@ class InitialState:
         G = self.A + 1j * self.B
         AA = tf.matmul(G, G, adjoint_b=True)
         self.init = AA/tf.linalg.trace(AA)
-        self.init = self.c * self.init + (1 - self.c) * self.init_ideal
+        if self.k is not None:
+            self.init = self.c * self.init + (1 - self.c) * self.init_ideal
+        
 
     @property
     def c(self):
@@ -97,9 +102,12 @@ class POVM:
 
         self.parameter_list = [self.A, self.B]
 
-        k = -np.log(1 / c - 1)
-        self.k = tf.Variable(k, trainable=True)
-        self.parameter_list.append(self.k)
+        if c is None:
+            self.k = None
+        else:
+            k = -np.log(1 / c - 1)
+            self.k = tf.Variable(k, trainable=True)
+            self.parameter_list.append(self.k)
 
         self.generate_POVM()
 
@@ -109,7 +117,42 @@ class POVM:
         D = tf.math.reduce_sum(AA, axis=0)
         invsqrtD = tf.linalg.inv(tf.linalg.sqrtm(D))
         self.povm = tf.matmul(tf.matmul(invsqrtD, AA), invsqrtD)
-        self.povm = self.c*self.povm_ideal + (1-self.c)*self.povm
+        if self.k is not None:
+            self.povm = self.c * self.povm_ideal + (1 - self.c) * self.povm
+
+    @property
+    def c(self):
+        return tf.cast(1 / (1 + tf.exp(-self.k)),dtype=precision)
+
+
+class CorruptionMatrix:
+    def __init__(self, d, c = 0.9, trainable=True):
+        self.d = d
+        self.A = tf.cast(tf.random.normal((d, d), 0, 1), dtype=precision)
+        self.povm_ideal = povm_ideal(d)
+
+        if trainable:
+            self.A = tf.Variable(self.A, trainable=True)
+
+        self.parameter_list = [self.A]
+
+        if c is None:
+            self.k = None
+        else:
+            k = -np.log(1 / c - 1)
+            self.k = tf.Variable(k, trainable=True)
+            self.parameter_list.append(self.k)
+
+        self.povm = None
+        self.generate_POVM()
+
+    def generate_POVM(self):
+        C = tf.abs(self.A)
+        C = C / np.sum(C, axis=1)
+        C = tf.transpose(C)
+        self.povm = tf.cast(corr_mat_to_povm(C), dtype=precision)
+        if self.k is not None:
+            self.povm = self.c*self.povm_ideal + (1-self.c)*self.povm
 
     @property
     def c(self):
@@ -146,7 +189,7 @@ class SPAM:
                 self.generate_SPAM()
                 inputs_batch = apply_unitary(self.init.init, inputs_batch)
                 output_batch = measurement(inputs_batch, povm = self.povm.povm)
-                loss = tf.math.reduce_mean((targets_batch - output_batch)**2)
+                loss = self.d*tf.math.reduce_mean((targets_batch - output_batch)**2)
 
             grads = tape.gradient(loss, self.parameter_list)
             self.optimizer.apply_gradients(zip(grads, self.parameter_list))
@@ -155,6 +198,25 @@ class SPAM:
         print(np.abs(loss.numpy()))
 
         self.generate_SPAM()
+
+    def pretrain(self, num_iter, targets = [None, None], verbose=True):
+        init_target, povm_target = targets
+        if init_target is None:
+            init_target = init_ideal(self.d)
+        if povm_target is None:
+            povm_target = povm_ideal(self.d)
+
+        for step in tqdm(range(num_iter)):
+
+            with tf.GradientTape() as tape:
+                self.generate_SPAM()
+                loss1 = tf.reduce_mean(tf.abs(self.init.init - init_target) ** 2)
+                loss2 = tf.reduce_mean(tf.abs(self.povm.povm - povm_target) ** 2)
+                loss = loss1 + loss2
+
+            grads = tape.gradient(loss, self.parameter_list)
+            self.optimizer.apply_gradients(zip(grads, self.parameter_list))
+
 
     def generate_SPAM(self):
         self.init.generate_init()

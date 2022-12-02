@@ -210,7 +210,7 @@ class ExecuteAndCollect:
             with open("../../data/" + filename + str(i), 'wb') as handle:
                 pickle.dump(self.result_list[-1], handle)
 
-    def runner(self, circuit_list, backend, shots):
+    def runner(self, circuit_list, backend, shots, scheduling_method = "asap"):
         N = len(circuit_list)
         num_batches = (N+500-1)//500
         circuit_batch_list = [circuit_list[500*i: 500*(i+1)] for i in range(num_batches)]
@@ -225,7 +225,7 @@ class ExecuteAndCollect:
                                             backend, 
                                             optimization_level = 0, 
                                             seed_transpiler=42, 
-                                            scheduling_method = 'asap')
+                                            scheduling_method = scheduling_method)
                 
                 job = backend.run(trans_circ_list, shots = shots)
                 
