@@ -54,7 +54,7 @@ def povm_ideal(d):
 
 
 class InitialState:
-    def __init__(self, d, c = 0.9, trainable=True):
+    def __init__(self, d, c=0.9, trainable=True):
         self.d = d
 
         self.A = tf.cast(tf.random.normal((d, d), 0, 1), dtype=precision)
@@ -79,18 +79,17 @@ class InitialState:
     def generate_init(self):
         G = self.A + 1j * self.B
         AA = tf.matmul(G, G, adjoint_b=True)
-        self.init = AA/tf.linalg.trace(AA)
+        self.init = AA / tf.linalg.trace(AA)
         if self.k is not None:
-            self.init = self.c * self.init + (1 - self.c) * self.init_ideal
-        
+            self.init = self.c * self.init_ideal + (1 - self.c) * self.init
 
     @property
     def c(self):
-        return tf.cast(1 / (1 + tf.exp(-self.k)),dtype=precision)
+        return tf.cast(1 / (1 + tf.exp(-self.k)), dtype=precision)
 
 
 class POVM:
-    def __init__(self, d, c = 0.9, trainable=True):
+    def __init__(self, d, c=0.9, trainable=True):
         self.d = d
         self.A = tf.cast(tf.random.normal((d, d, d), 0, 1), dtype=precision)
         self.B = tf.cast(tf.random.normal((d, d, d), 0, 1), dtype=precision)
@@ -122,11 +121,11 @@ class POVM:
 
     @property
     def c(self):
-        return tf.cast(1 / (1 + tf.exp(-self.k)),dtype=precision)
+        return tf.cast(1 / (1 + tf.exp(-self.k)), dtype=precision)
 
 
 class CorruptionMatrix:
-    def __init__(self, d, c = 0.9, trainable=True):
+    def __init__(self, d, c=0.9, trainable=True):
         self.d = d
         self.A = tf.cast(tf.random.normal((d, d), 0, 1), dtype=precision)
         self.povm_ideal = povm_ideal(d)
@@ -152,17 +151,15 @@ class CorruptionMatrix:
         C = tf.transpose(C)
         self.povm = tf.cast(corr_mat_to_povm(C), dtype=precision)
         if self.k is not None:
-            self.povm = self.c*self.povm_ideal + (1-self.c)*self.povm
+            self.povm = self.c * self.povm_ideal + (1 - self.c) * self.povm
 
     @property
     def c(self):
-        return tf.cast(1 / (1 + tf.exp(-self.k)),dtype=precision)
+        return tf.cast(1 / (1 + tf.exp(-self.k)), dtype=precision)
 
 
 class SPAM:
-    def __init__(
-        self, init = None, povm = None, loss_function = None, optimizer=None
-    ):
+    def __init__(self, init=None, povm=None, loss_function=None, optimizer=None):
 
         self.d = init.d
         self.init = init
@@ -187,9 +184,15 @@ class SPAM:
             with tf.GradientTape(watch_accessed_variables=False) as tape:
                 tape.watch(self.parameter_list)
                 self.generate_SPAM()
-                inputs_batch = apply_unitary(self.init.init, inputs_batch)
-                output_batch = measurement(inputs_batch, povm = self.povm.povm)
-                loss = self.d*tf.math.reduce_mean((targets_batch - output_batch)**2)
+                outputs_batch = measurement(
+                    tf.repeat(self.init.init[None, :, :], N, axis=0),
+                    U_basis=inputs_batch,
+                    povm=self.povm.povm,
+                )
+
+                loss = self.d * tf.math.reduce_mean(
+                    (targets_batch - outputs_batch) ** 2
+                )
 
             grads = tape.gradient(loss, self.parameter_list)
             self.optimizer.apply_gradients(zip(grads, self.parameter_list))
@@ -199,7 +202,7 @@ class SPAM:
 
         self.generate_SPAM()
 
-    def pretrain(self, num_iter, targets = [None, None], verbose=True):
+    def pretrain(self, num_iter, targets=[None, None], verbose=True):
         init_target, povm_target = targets
         if init_target is None:
             init_target = init_ideal(self.d)
@@ -217,8 +220,6 @@ class SPAM:
             grads = tape.gradient(loss, self.parameter_list)
             self.optimizer.apply_gradients(zip(grads, self.parameter_list))
 
-
     def generate_SPAM(self):
         self.init.generate_init()
         self.povm.generate_POVM()
-

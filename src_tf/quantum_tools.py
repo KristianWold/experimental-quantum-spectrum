@@ -130,8 +130,8 @@ def channel_fidelity(map_A, map_B):
 
 def apply_unitary(state, U):
     Ustate = tf.matmul(U, state)
-    state = tf.matmul(Ustate, U, adjoint_b=True)
-    return state
+    UstateU = tf.matmul(Ustate, U, adjoint_b=True)
+    return UstateU
 
 
 def attraction(channel, N=1000):
@@ -156,9 +156,6 @@ def attraction(channel, N=1000):
 
 def measurement(state, U_basis=None, povm=None):
     d = state.shape[1]
-    if U_basis is None:
-        U_basis = tf.eye(d, dtype=precision)
-        U_basis = tf.expand_dims(U_basis, axis=0)
 
     if povm is None:
         povm = corr_mat_to_povm(np.eye(d))

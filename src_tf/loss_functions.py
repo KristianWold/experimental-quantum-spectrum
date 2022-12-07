@@ -47,7 +47,6 @@ class ProbabilityMSE:
         else:
             U_prep = input
             U_basis = None
-        
 
         state = tf.repeat(tf.expand_dims(channel.spam.init.init, axis=0), N, axis=0)
         state = apply_unitary(state, U_prep)
@@ -63,20 +62,19 @@ class KLDiv:
 
     def __call__(self, channel, input, target):
         N = target.shape[0]
-        
+        d = channel.spam.d
         U_prep, U_basis = input
 
         state = tf.repeat(tf.expand_dims(channel.spam.init.init, axis=0), N, axis=0)
         state = apply_unitary(state, U_prep)
         state = channel.apply_channel(state)
         output = measurement(state, U_basis, channel.spam.povm.povm)
-        loss = tf.math.reduce_sum(target * tf.math.log((target + 1e-32) / output))
+        loss = d * tf.math.reduce_mean(target * tf.math.log((target + 1e-32) / output))
 
         return loss
-    
+
 
 class LogLikelihood:
-
     def __call__(self, channel, input, target):
         N = target.shape[0]
         d = channel.spam.init.shape[0]
