@@ -73,7 +73,6 @@ def pauli_observable(config, return_mode="density"):
 
         if index == 2:
             pass  # measure in computational basis
-    
 
     if return_mode == "circuit":
         circuit.measure(q_reg, c_reg)
@@ -172,7 +171,6 @@ def counts_to_probs(counts_list):
 
 
 class ExecuteAndCollect:
-
     def setup_circuits(self, circuit_target_list=None, N_map=None, N_spam=None):
         self.circuit_target_list = circuit_target_list
 
@@ -180,12 +178,18 @@ class ExecuteAndCollect:
         self.data_list = []
 
         for circuit_target in self.circuit_target_list:
-            inputs_map, circuit_list_map = generate_pauli_circuits(self.n, circuit_target, N = N_map)
+            inputs_map, circuit_list_map = generate_pauli_circuits(
+                self.n, circuit_target, N=N_map
+            )
             inputs_spam, circuit_list_spam = generate_pauliInput_circuits(self.n)
 
-            self.data_list.append([inputs_map, circuit_list_map, inputs_spam, circuit_list_spam])
+            self.data_list.append(
+                [inputs_map, circuit_list_map, inputs_spam, circuit_list_spam]
+            )
 
-    def execute_circuits(self, backend, shots_map, shots_spam, filename=None, concatenate=False):
+    def execute_circuits(
+        self, backend, shots_map, shots_spam, filename=None, concatenate=False
+    ):
         self.result_list = []
         self.shots_map = shots_map
         self.shots_spam = shots_spam
@@ -197,46 +201,53 @@ class ExecuteAndCollect:
             if concatenate:
                 circuit_list = circuit_list_map + circuit_list_spam
                 counts_list = self.runner(circuit_list, backend, shots=shots_map)
-                counts_map = counts_list[:len(circuit_list_map)]
-                counts_spam = counts_list[len(circuit_list_map):]
+                counts_map = counts_list[: len(circuit_list_map)]
+                counts_spam = counts_list[len(circuit_list_map) :]
             else:
                 counts_map = self.runner(circuit_list_map, backend, shots=shots_map)
                 counts_spam = self.runner(circuit_list_spam, backend, shots=shots_spam)
-            
+
             probs_map = counts_to_probs(counts_map)
             probs_spam = counts_to_probs(counts_spam)
             self.result_list.append([inputs_map, probs_map, inputs_spam, probs_spam])
 
-            with open("../../data/" + filename + str(i), 'wb') as handle:
+            with open("../../data/" + filename + str(i), "wb") as handle:
                 pickle.dump(self.result_list[-1], handle)
 
-    def runner(self, circuit_list, backend, shots, scheduling_method = "asap"):
+    def runner(self, circuit_list, backend, shots, scheduling_method="asap"):
         N = len(circuit_list)
-        num_batches = (N+500-1)//500
-        circuit_batch_list = [circuit_list[500*i: 500*(i+1)] for i in range(num_batches)]
+        num_batches = (N + 500 - 1) // 500
+        circuit_batch_list = [
+            circuit_list[500 * i : 500 * (i + 1)] for i in range(num_batches)
+        ]
         counts_list = []
         for i, circuit_batch in enumerate(tqdm(circuit_batch_list)):
-            num_parcels = (len(circuit_batch) + 100 - 1)//100
-            circuit_parcel_list = [circuit_batch[100*j: 100*(j+1)] for j in range(num_parcels)]
+            num_parcels = (len(circuit_batch) + 100 - 1) // 100
+            circuit_parcel_list = [
+                circuit_batch[100 * j : 100 * (j + 1)] for j in range(num_parcels)
+            ]
             job_list = []
-            
+
             for circuit_parcel in circuit_parcel_list:
-                trans_circ_list = qk.transpile(circuit_parcel, 
-                                            backend, 
-                                            optimization_level = 0, 
-                                            seed_transpiler=42, 
-                                            scheduling_method = scheduling_method)
-                
-                job = backend.run(trans_circ_list, shots = shots)
-                
+                trans_circ_list = qk.transpile(
+                    circuit_parcel,
+                    backend,
+                    optimization_level=0,
+                    seed_transpiler=42,
+                    scheduling_method=scheduling_method,
+                )
+
+                job = backend.run(trans_circ_list, shots=shots)
+
                 job_list.append(job)
-            
+
             result_list = []
             for job in tqdm(job_list):
                 result_list.append(job.result())
-                
-            for result, circuit_parcel in zip(result_list, circuit_parcel_list):
-                counts_list.extend([result.get_counts(circuit) for circuit in circuit_parcel]) 
-        
-        return counts_list  
 
+            for result, circuit_parcel in zip(result_list, circuit_parcel_list):
+                counts_list.extend(
+                    [result.get_counts(circuit) for circuit in circuit_parcel]
+                )
+
+        return counts_list

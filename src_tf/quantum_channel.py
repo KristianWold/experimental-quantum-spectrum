@@ -86,39 +86,6 @@ def channel_fidelity(channel_A, channel_B):
     return fidelity
 
 
-def channel_spectrum(channel, real=True):
-    eig, _ = tf.linalg.eig(reshuffle(channel.choi))
-    eig = tf.expand_dims(eig, axis=1)
-
-    if real:
-        x = tf.cast(tf.math.real(eig), dtype=precision)
-        y = tf.cast(tf.math.imag(eig), dtype=precision)
-        eig = tf.concat([x, y], axis=1)
-
-    return eig
-
-
-def choi_spectrum(channel):
-    eig, _ = tf.linalg.eig(channel.choi)
-    eig = tf.expand_dims(eig, axis=1)
-
-    return eig
-
-
-def normalize_spectrum(spectrum, scale=1):
-    spectrum = spectrum.numpy()
-    idx = np.argmax(np.linalg.norm(spectrum, axis=1))
-    spectrum[idx] = (0, 0)
-
-    max = np.max(np.linalg.norm(spectrum, axis=1))
-    spectrum = scale / max * spectrum
-
-    spectrum[idx] = (1, 0)
-    spectrum = tf.cast(tf.convert_to_tensor(spectrum), dtype=precision)
-
-    return spectrum
-
-
 def channel_steady_state(channel):
     d = channel.d
     super_operator = reshuffle(channel.choi)

@@ -15,6 +15,7 @@ from utils import *
 from experimental import *
 from set_precision import *
 from quantum_channel import *
+from spectrum import *
 
 
 # Loss functions
