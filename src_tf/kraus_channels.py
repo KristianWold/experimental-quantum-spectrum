@@ -64,16 +64,23 @@ class KrausMap(Channel):
         spam=None,
         trainable=True,
         generate=True,
+        generate_full=False,
     ):
 
         self.d = d
         self.rank = rank
 
         if spam is None:
-            spam = SPAM(d=d, init=init_ideal(d), povm=povm_ideal(d))
+            spam = IdealSPAM(d=d)
         self.spam = spam
 
-        _, self.A, self.B = generate_ginibre(rank * d, d, trainable=trainable)
+        if generate_full:
+            _, self.A, self.B = generate_ginibre(
+                rank * d, rank * d, trainable=trainable
+            )
+        else:
+            _, self.A, self.B = generate_ginibre(rank * d, d, trainable=trainable)
+
         self.parameter_list = [self.A, self.B]
 
         self.kraus = None
@@ -83,7 +90,7 @@ class KrausMap(Channel):
     def generate_channel(self):
         G = tf.complex(self.A, self.B)
         U = generate_unitary(G=G)
-        self.kraus = tf.reshape(U, (1, self.rank, self.d, self.d))
+        self.kraus = tf.reshape(U[:, : self.d], (1, self.rank, self.d, self.d))
 
     def apply_channel(self, state):
         state = tf.expand_dims(state, axis=1)
@@ -141,8 +148,8 @@ class DilutedKrausMap(KrausMap):
             c = 1 / (1 + tf.exp(-self.k))
             c = tf.cast(c, dtype=precision)
             self.kraus = tf.concat(
-                [tf.sqrt(c) * self.U, tf.sqrt(1 - c) * self.kraus_part.kraus], axis=1)
-    
+                [tf.sqrt(c) * self.U, tf.sqrt(1 - c) * self.kraus_part.kraus], axis=1
+            )
 
     @property
     def c(self):
@@ -221,7 +228,7 @@ class SquaredKrausMap(KrausMap):
     def choi(self):
         return channel_to_choi(self)
 
-    
+
 class TwoLocalKrausMap(KrausMap):
     def __init__(
         self,
@@ -231,33 +238,24 @@ class TwoLocalKrausMap(KrausMap):
         generate=True,
     ):
 
-    
         self.d = d
         self.n = int(np.log2(d))
-        self.kraus_list = [KrausMap(4, 16) for i in range(self.n-1)]
+        self.kraus_list = [KrausMap(4, 16) for i in range(self.n - 1)]
         self.parameter_list = []
         for kraus in self.kraus_list:
             self.parameter_list.extend(kraus.parameter_list)
 
-    
         self.kraus = None
         if generate:
             self.generate_channel()
-        
 
     def generate_channel(self):
         self.kraus = []
         for i, kraus in enumerate(self.kraus_list):
             kraus.generate_channel()
-            I_start = i*[self.I]
-            I_end = (self.n - i - 2)*[self.I]
-            operators = I_start + [kraus.kraus] +  I_end
-            self.kraus.append(kron(*operators)/np.sqrt(self.n-1))
+            I_start = i * [self.I]
+            I_end = (self.n - i - 2) * [self.I]
+            operators = I_start + [kraus.kraus] + I_end
+            self.kraus.append(kron(*operators) / np.sqrt(self.n - 1))
 
         self.kraus = tf.concat(self.kraus, axis=1)
-        
-        
-        
-
-
-

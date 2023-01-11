@@ -13,14 +13,14 @@ from utils import *
 from set_precision import *
 
 
-def partial_trace(X, discard_first=True):
-    d = int(np.sqrt(X.shape[0]))
-    X = tf.reshape(X, (d, d, d, d))
+def partial_trace(state, discard_first=True):
+    d = int(np.sqrt(state.shape[1]))
+    state = tf.reshape(state, (-1, d, d, d, d))
     if discard_first:
-        Y = tf.einsum("ijik->jk", X)
+        state = tf.einsum("bijik->bjk", state)
     else:
-        Y = tf.einsum("jiki->jk", X)
-    return Y
+        state = tf.einsum("bjiki->bjk", state)
+    return state
 
 
 def partial_transpose(state, qubit):

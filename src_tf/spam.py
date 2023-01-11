@@ -201,6 +201,7 @@ class SPAM:
         print(np.abs(loss.numpy()))
 
         self.generate_SPAM()
+        self.optimizer = None
 
     def pretrain(self, num_iter, targets=[None, None], verbose=True):
         init_target, povm_target = targets
@@ -220,6 +221,19 @@ class SPAM:
             grads = tape.gradient(loss, self.parameter_list)
             self.optimizer.apply_gradients(zip(grads, self.parameter_list))
 
+        self.zero_optimizer()
+
     def generate_SPAM(self):
         self.init.generate_init()
         self.povm.generate_POVM()
+
+    def zero_optimizer(self):
+        for var in self.optimizer.variables():
+            var.assign(tf.zeros_like(var))
+
+
+class IdealSPAM:
+    def __init__(self, d):
+        self.d = d
+        self.init = init_ideal(d)
+        self.povm = povm_ideal(d)
