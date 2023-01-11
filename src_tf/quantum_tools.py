@@ -154,6 +154,30 @@ def attraction(channel, N=1000):
     return att
 
 
+def corr_mat_to_povm(corr_mat):
+    d = corr_mat.shape[0]
+    povm = []
+    for i in range(d):
+        M = tf.linalg.diag(corr_mat[i, :])
+        povm.append(M)
+
+    povm = tf.convert_to_tensor(povm, dtype=precision)
+
+    return povm
+
+
+def init_ideal(d):
+    init = np.zeros((d, d))
+    init[0, 0] = 1
+    init = tf.convert_to_tensor(init, dtype=precision)
+    return init
+
+
+def povm_ideal(d):
+    povm = tf.cast(corr_mat_to_povm(np.eye(d)), dtype=precision)
+    return povm
+
+
 def measurement(state, U_basis=None, povm=None):
     d = state.shape[1]
 

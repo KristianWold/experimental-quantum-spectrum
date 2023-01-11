@@ -29,30 +29,6 @@ def generate_corruption_matrix(counts_list):
     return corr_mat
 
 
-def corr_mat_to_povm(corr_mat):
-    d = corr_mat.shape[0]
-    povm = []
-    for i in range(d):
-        M = tf.linalg.diag(corr_mat[i, :])
-        povm.append(M)
-
-    povm = tf.convert_to_tensor(povm, dtype=precision)
-
-    return povm
-
-
-def init_ideal(d):
-    init = np.zeros((d, d))
-    init[0, 0] = 1
-    init = tf.convert_to_tensor(init, dtype=precision)
-    return init
-
-
-def povm_ideal(d):
-    povm = tf.cast(corr_mat_to_povm(np.eye(d)), dtype=precision)
-    return povm
-
-
 class InitialState:
     def __init__(self, d, c=0.9, trainable=True):
         self.d = d
@@ -235,5 +211,15 @@ class SPAM:
 class IdealSPAM:
     def __init__(self, d):
         self.d = d
+        self.init = IdealInit(d)
+        self.povm = IdealPOVM(d)
+
+class IdealInit:
+    def __init__(self, d):
+        self.d = d
         self.init = init_ideal(d)
+
+class IdealPOVM:
+    def __init__(self, d):
+        self.d = d
         self.povm = povm_ideal(d)
