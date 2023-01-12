@@ -205,23 +205,45 @@ class SphereStrings:
         self.Y = tf.repeat(self.Y[None, :, :], self.n, axis=0)
         self.Y = tf.repeat(self.Y[None, :, :, :], self.N, axis=0)
 
-        self.parameters = tf.random.normal((self.N, 2 * self.n, 1, 1), 0, 1)
+       # self.parameters = tf.random.normal((self.N, 2 * self.n, 1, 1), 0, 1)
+        self.parameters = tf.random.uniform((self.N, 2 * self.n, 1, 1), -np.pi, np.pi)
         self.parameters = tf.Variable(self.parameters, trainable=True)
         self.parameter_list = [self.parameters]
     
     def generate(self):
-        self.angles = tf.cast(np.pi*tf.math.tanh(self.parameters), dtype = precision)
+        self.angles = tf.cast(self.parameters, dtype=precision)#tf.cast(2*np.pi*tf.math.tanh(self.parameters), dtype = precision)
         rx = tf.math.cos(self.angles[:, 0:self.n]/2)*self.I - 1j*tf.math.sin(self.angles[:, 0:self.n]/2)*self.X
         ry = tf.math.cos(self.angles[:, self.n:]/2)*self.I - 1j*tf.math.sin(self.angles[:, self.n:]/2)*self.Y
         self.strings = ry@rx
 
     def fidelity(self):
         self.generate()
+        #fid = 0
+        #for i in range(self.N):
+        #    for j in range(self.N):
+        #        A = self.strings[i]@tf.linalg.adjoint(self.strings[j])
+        #        A = tf.linalg.trace(A)
+        #        A = tf.math.reduce_prod(A)
+        #        fid += tf.abs(A)**2
 
-        A = tf.linalg.einsum('acde,bcef -> abcdf', self.strings, tf.linalg.adjoint(self.strings))
+        #fid = (fid/self.N**2 + self.d)/(self.d**2 + self.d)
+        #A = tf.tensordot(self.string, tf.linalg.adjoint(self.string), axes = 0)
+        
+        A = tf.linalg.einsum('a...ij,b...jk -> ab...ik', self.strings, tf.linalg.adjoint(self.strings))
         A = tf.linalg.trace(A)
-        A = tf.math.reduce_prod(A, axis = 2)
+        A = tf.abs(tf.math.reduce_prod(A, axis = 2))**2
+        
+        fid = (A + self.d)/(self.d**2 + self.d)
+
+        fid = tf.linalg.set_diag(fid, tf.zeros_like(fid[:,0]))
+        fid = tf.math.reduce_max(fid, axis = 1)
+        fid = tf.math.reduce_sum(fid)/self.N
+        
+        """
+        A = tf.linalg.einsum('abij,cdjk -> abcdik', self.strings, tf.linalg.adjoint(self.strings))
+        A = tf.linalg.trace(A)
         fid = (tf.math.reduce_sum(tf.abs(A)**2)/self.N**2 + self.d)/(self.d**2 + self.d)
+        """
         return fid
     
     def generate_circuits(self):
@@ -242,7 +264,7 @@ class SphereStrings:
         return circuit_list, unitary_list
 
     def optimize(self, steps):
-        optimizer = tf.keras.optimizers.Adam(learning_rate=0.1)
+        optimizer = tf.keras.optimizers.Adam(learning_rate=0.01)
         for i in range(steps):
             with tf.GradientTape(watch_accessed_variables=False) as tape:
                 tape.watch(self.parameters)
