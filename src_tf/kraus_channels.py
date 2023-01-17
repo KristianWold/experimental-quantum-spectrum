@@ -123,10 +123,10 @@ class DilutedKrausMap(KrausMap):
         self.spam = spam
         self.kraus_part = kraus_part
 
-        if kraus_part is None:
-            kraus_part = KrausMap(d, rank, trainable=trainable)
+        if self.kraus_part is None:
+            self.kraus_part = KrausMap(d, rank, trainable=trainable)
 
-        self.parameter_list = kraus_part.parameter_list
+        self.parameter_list = self.kraus_part.parameter_list
 
         self.U = U
         if self.U is not None:
