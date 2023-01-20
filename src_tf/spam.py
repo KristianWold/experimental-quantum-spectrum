@@ -166,6 +166,9 @@ class SPAM:
                     povm=self.povm.povm,
                 )
 
+                # loss = self.d * tf.math.reduce_mean(
+                #    targets_batch * tf.math.log((targets_batch + 1e-32) / outputs_batch)
+                # )
                 loss = self.d * tf.math.reduce_mean(
                     (targets_batch - outputs_batch) ** 2
                 )
@@ -196,6 +199,8 @@ class SPAM:
 
             grads = tape.gradient(loss, self.parameter_list)
             self.optimizer.apply_gradients(zip(grads, self.parameter_list))
+            if verbose:
+                print(step, np.abs(loss.numpy()))
 
         self.zero_optimizer()
 
@@ -214,10 +219,12 @@ class IdealSPAM:
         self.init = IdealInit(d)
         self.povm = IdealPOVM(d)
 
+
 class IdealInit:
     def __init__(self, d):
         self.d = d
         self.init = init_ideal(d)
+
 
 class IdealPOVM:
     def __init__(self, d):

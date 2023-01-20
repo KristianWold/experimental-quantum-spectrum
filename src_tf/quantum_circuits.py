@@ -9,6 +9,7 @@ from qiskit.quantum_info import Operator
 from scipy.linalg import sqrtm
 from tqdm.notebook import tqdm
 
+
 def pqc_basic(n, L):
     theta_list = [np.random.uniform(-np.pi, np.pi, 2 * n) for i in range(L)]
     circuit = qk.QuantumCircuit(n)
@@ -61,3 +62,31 @@ def pqc_more_expressive(n, L):
             circuit.cx(n - i - 1, n - (i + 1) % n - 1)
 
     return circuit
+
+
+def integrabel_clifford(n, L):
+    circuit = qk.QuantumCircuit(n)
+    for i in range(L):
+        for j in range(n):
+            circuit.z(j)
+
+        # apply cnots
+        for j in range(n // 2):
+            circuit.cnot(2 * j, 2 * j + 1)
+
+    return circuit
+
+
+"""
+def integrabel_clifford(n, L):
+    circuit = qk.QuantumCircuit(n)
+    for i in range(L):
+        for j in range(n):
+            circuit.z(j)
+
+        # apply cnots
+        for j in range(n // 2):
+            circuit.(2 * j, 2 * j + 1)
+
+    return circuit
+"""

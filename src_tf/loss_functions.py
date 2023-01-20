@@ -69,6 +69,7 @@ class KLDiv:
         state = tf.repeat(tf.expand_dims(channel.spam.init.init, axis=0), N, axis=0)
         state = apply_unitary(state, U_prep)
         state = channel.apply_channel(state)
+
         output = measurement(state, U_basis, channel.spam.povm.povm)
         loss = d * tf.math.reduce_mean(target * tf.math.log((target + 1e-32) / output))
 
