@@ -64,24 +64,21 @@ class KrausMap(Channel):
         spam=None,
         trainable=True,
         generate=True,
-        generate_full=False,
     ):
 
         self.d = d
         self.rank = rank
+        self.trainable = trainable
 
         if spam is None:
             spam = IdealSPAM(d=d)
         self.spam = spam
 
-        if generate_full:
-            _, self.A, self.B = generate_ginibre(
-                rank * d, rank * d, trainable=trainable
-            )
-        else:
-            _, self.A, self.B = generate_ginibre(rank * d, d, trainable=trainable)
+        _, self.A, self.B = generate_ginibre(rank * d, d, trainable=trainable)
 
-        self.parameter_list = [self.A, self.B]
+        self.parameter_list = []
+        if self.trainable:
+            self.parameter_list = [self.A, self.B]
 
         self.kraus = None
         if generate:
@@ -142,7 +139,8 @@ class DilutedKrausMap(KrausMap):
             self.generate_channel()
 
     def generate_channel(self):
-        self.kraus_part.generate_channel()
+        if self.kraus_part.trainable:
+            self.kraus_part.generate_channel()
 
         if self.U is not None:
             c = 1 / (1 + tf.exp(-self.k))

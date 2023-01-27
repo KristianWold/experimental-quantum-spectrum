@@ -220,6 +220,35 @@ class SpectrumDistance:
         return distance
 
 
+class AnnulusDistance:
+    def __call__(self, channel, input, target):
+        spectrum_target = target[0]
+        spectrum_model = channel_spectrum(channel, use_coords=True)
+
+        r_mean1, r_std1, a_mean1, a_std1 = self.spectrum_to_momenta(spectrum_model)
+        r_mean2, r_std2, a_mean2, a_std2 = self.spectrum_to_momenta(spectrum_target)
+
+        distance = (
+            tf.math.abs(r_mean1 - r_mean2)
+            + tf.math.abs(r_std1 - r_std2)
+            + tf.math.abs(a_mean1 - a_mean2)
+            + tf.math.abs(a_std1 - a_std2)
+        )
+
+        return distance
+
+    def spectrum_to_momenta(self, spectrum):
+        radial = spectrum_to_radial(spectrum)
+        r_mean = tf.math.reduce_mean(radial)
+        r_std = tf.math.reduce_std(radial)
+
+        angular = spectrum_to_angular(spectrum) / (2 * np.pi)
+        a_mean = tf.math.reduce_mean(angular)
+        a_std = tf.math.reduce_std(angular)
+
+        return r_mean, r_std, a_mean, a_std
+
+
 # Regularizers
 #######################################################
 

@@ -191,3 +191,13 @@ def add_noise_to_probs(tensor, noise=0.01):
     tensor = tensor / tf.math.reduce_sum(tensor, axis=1, keepdims=True)
 
     return tensor
+
+
+def spectrum_to_radial(spectrum):
+    radial = tf.norm(spectrum, axis=1)
+    return radial
+
+
+def spectrum_to_angular(spectrum):
+    angular = tf.math.angle(spectrum[:-1, 0] + 1j * spectrum[:-1, 1])
+    return angular

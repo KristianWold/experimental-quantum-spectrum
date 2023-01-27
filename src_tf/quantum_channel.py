@@ -54,6 +54,7 @@ def effective_rank(channel):
     rank_eff = d2 / purity
     return rank_eff
 
+
 """
 def channel_to_choi(channel_list):
     if not isinstance(channel, list):
@@ -86,8 +87,8 @@ def channel_to_choi_map(channel_list):
     super_operator_full = reshuffle(channel_list[0].choi)
     for channel in channel_list[1:]:
         super_operator = reshuffle(channel.choi)
-        super_operator_full = super_operator_full@super_operator
-    
+        super_operator_full = super_operator @ super_operator_full
+
     choi_map = ChoiMapStatic(super_operator_full)
 
     return choi_map
@@ -133,6 +134,9 @@ class Channel:
 
     def apply_channel(self, state):
         pass
+
+    def spectrum(self, **kwargs):
+        return channel_spectrum(self, **kwargs)
 
     @property
     def choi(self):

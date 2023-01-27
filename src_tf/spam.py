@@ -135,7 +135,13 @@ class CorruptionMatrix:
 
 
 class SPAM:
-    def __init__(self, init=None, povm=None, loss_function=None, optimizer=None):
+    def __init__(
+        self,
+        init=None,
+        povm=None,
+        loss_function=None,
+        optimizer=tf.optimizers.Adam(learning_rate=0.01),
+    ):
 
         self.d = init.d
         self.init = init

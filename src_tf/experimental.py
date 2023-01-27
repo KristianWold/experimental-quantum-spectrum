@@ -181,11 +181,10 @@ def generate_sandwich_circuits(target_circuit, input_circuit_list, output_circui
 
         circuit.add_register(qk.ClassicalRegister(n))
         circuit.measure(circuit.qregs[0], circuit.cregs[0])
-        
+
         circuit_list.append(circuit)
 
     return circuit_list
-
 
 
 class SphereStrings:
@@ -206,49 +205,57 @@ class SphereStrings:
         self.Y = tf.repeat(self.Y[None, :, :], self.n, axis=0)
         self.Y = tf.repeat(self.Y[None, :, :, :], self.N, axis=0)
 
-       # self.parameters = tf.random.normal((self.N, 2 * self.n, 1, 1), 0, 1)
+        # self.parameters = tf.random.normal((self.N, 2 * self.n, 1, 1), 0, 1)
         self.parameters = tf.random.uniform((self.N, 2 * self.n, 1, 1), -np.pi, np.pi)
         self.parameters = tf.Variable(self.parameters, trainable=True)
         self.parameter_list = [self.parameters]
-    
+
     def generate(self):
         self.angles = tf.cast(self.parameters, dtype=precision)
-        #self.angles = tf.cast(2*np.pi*tf.math.tanh(self.parameters), dtype = precision)
-        rx = tf.math.cos(self.angles[:, 0:self.n]/2)*self.I - 1j*tf.math.sin(self.angles[:, 0:self.n]/2)*self.X
-        ry = tf.math.cos(self.angles[:, self.n:]/2)*self.I - 1j*tf.math.sin(self.angles[:, self.n:]/2)*self.Y
-        self.strings = ry@rx
+        # self.angles = tf.cast(2*np.pi*tf.math.tanh(self.parameters), dtype = precision)
+        rx = (
+            tf.math.cos(self.angles[:, 0 : self.n] / 2) * self.I
+            - 1j * tf.math.sin(self.angles[:, 0 : self.n] / 2) * self.X
+        )
+        ry = (
+            tf.math.cos(self.angles[:, self.n :] / 2) * self.I
+            - 1j * tf.math.sin(self.angles[:, self.n :] / 2) * self.Y
+        )
+        self.strings = ry @ rx
 
     def fidelity(self):
         self.generate()
-        #fid = 0
-        #for i in range(self.N):
+        # fid = 0
+        # for i in range(self.N):
         #    for j in range(self.N):
         #        A = self.strings[i]@tf.linalg.adjoint(self.strings[j])
         #        A = tf.linalg.trace(A)
         #        A = tf.math.reduce_prod(A)
         #        fid += tf.abs(A)**2
 
-        #fid = (fid/self.N**2 + self.d)/(self.d**2 + self.d)
-        #A = tf.tensordot(self.string, tf.linalg.adjoint(self.string), axes = 0)
-        
-        A = tf.linalg.einsum('a...ij,b...jk -> ab...ik', self.strings, tf.linalg.adjoint(self.strings))
-        A = tf.linalg.trace(A)
-        A = tf.abs(tf.math.reduce_prod(A, axis = 2))**2
-        
-        fid = (A + self.d)/(self.d**2 + self.d)
+        # fid = (fid/self.N**2 + self.d)/(self.d**2 + self.d)
+        # A = tf.tensordot(self.string, tf.linalg.adjoint(self.string), axes = 0)
 
-        fid = tf.linalg.set_diag(fid, tf.zeros_like(fid[:,0]))
-        fid = tf.math.reduce_max(fid, axis = 1)
-        fid = tf.math.reduce_sum(fid)/self.N
-        
+        A = tf.linalg.einsum(
+            "a...ij,b...jk -> ab...ik", self.strings, tf.linalg.adjoint(self.strings)
+        )
+        A = tf.linalg.trace(A)
+        A = tf.abs(tf.math.reduce_prod(A, axis=2)) ** 2
+
+        fid = (A + self.d) / (self.d**2 + self.d)
+
+        fid = tf.linalg.set_diag(fid, tf.zeros_like(fid[:, 0]))
+        fid = tf.math.reduce_max(fid, axis=1)
+        fid = tf.math.reduce_sum(fid) / self.N
+
         """
         A = tf.linalg.einsum('abij,cdjk -> abcdik', self.strings, tf.linalg.adjoint(self.strings))
         A = tf.linalg.trace(A)
         fid = (tf.math.reduce_sum(tf.abs(A)**2)/self.N**2 + self.d)/(self.d**2 + self.d)
         """
         return fid
-    
-    def generate_circuits(self, grid = False):
+
+    def generate_circuits(self, grid=False):
         circuit_list = []
         unitary_list = []
         self.generate()
@@ -258,7 +265,7 @@ class SphereStrings:
             circuit = qk.QuantumCircuit(q_reg)
             for j in range(self.n):
                 circuit.rx(angles[i, j], j)
-                circuit.ry(angles[i, j+self.n], j)
+                circuit.ry(angles[i, j + self.n], j)
             circuit_list.append(circuit)
             unitary_list.append(Operator(circuit.reverse_bits()).data)
 
@@ -274,12 +281,11 @@ class SphereStrings:
                 loss = self.fidelity()
                 grads = tape.gradient(loss, self.parameter_list)
                 optimizer.apply_gradients(zip(grads, self.parameter_list))
-            #print(loss)
-
+            # print(loss)
 
 
 class GridStrings:
-    def __init__(self, n, N, grid_points = 10):
+    def __init__(self, n, N, grid_points=10):
         self.n = n
         self.d = 2**n
         self.N = N
@@ -296,8 +302,7 @@ class GridStrings:
         np.random.shuffle(grid_angles)
         self.grid_angles = grid_angles[:N]
 
-
-    def generate_circuits(self, grid = False):
+    def generate_circuits(self, grid=False):
         circuit_list = []
         unitary_list = []
         for i in range(self.N):
@@ -305,7 +310,7 @@ class GridStrings:
             circuit = qk.QuantumCircuit(q_reg)
             for j in range(self.n):
                 circuit.rx(self.grid_angles[i, j], j)
-                circuit.ry(self.grid_angles[i, j+self.n], j)
+                circuit.ry(self.grid_angles[i, j + self.n], j)
             circuit_list.append(circuit)
             unitary_list.append(Operator(circuit.reverse_bits()).data)
 
@@ -319,31 +324,37 @@ class HaarStrings:
         self.d = 2**n
         self.N = N
         self.RNG = np.random.default_rng(seed=seed)
-    
+
     def generate(self):
         self.strings = []
         for i in range(self.N):
-            U = [tf.cast(random_unitary(2, seed=self.RNG).data, dtype=precision) for j in range(self.n)]
+            U = [
+                tf.cast(random_unitary(2, seed=self.RNG).data, dtype=precision)
+                for j in range(self.n)
+            ]
             self.strings.append(U)
-
 
     def fidelity(self):
         self.generate()
-        
+
         strings_tensor = tf.cast(self.strings, dtype=precision)
 
-        A = tf.linalg.einsum('a...ij,b...jk -> ab...ik', strings_tensor, tf.linalg.adjoint(strings_tensor))
+        A = tf.linalg.einsum(
+            "a...ij,b...jk -> ab...ik",
+            strings_tensor,
+            tf.linalg.adjoint(strings_tensor),
+        )
         A = tf.linalg.trace(A)
-        A = tf.abs(tf.math.reduce_prod(A, axis = 2))**2
-        
-        fid = (A + self.d)/(self.d**2 + self.d)
+        A = tf.abs(tf.math.reduce_prod(A, axis=2)) ** 2
 
-        fid = tf.linalg.set_diag(fid, tf.zeros_like(fid[:,0]))
-        fid = tf.math.reduce_max(fid, axis = 1)
-        fid = tf.math.reduce_sum(fid)/self.N
-        
+        fid = (A + self.d) / (self.d**2 + self.d)
+
+        fid = tf.linalg.set_diag(fid, tf.zeros_like(fid[:, 0]))
+        fid = tf.math.reduce_max(fid, axis=1)
+        fid = tf.math.reduce_sum(fid) / self.N
+
         return fid
-    
+
     def generate_circuits(self):
         unitary_list = []
         self.generate()
@@ -358,34 +369,37 @@ class HaarInput:
         self.n = n
         self.d = 2**n
         self.N = N
-    
+
     def generate(self):
         self.strings = []
         for i in range(self.N):
             seed = np.random.randint(0, 10**6)
             U = tf.cast(random_unitary(self.d, seed=seed).data, dtype=precision)
             self.strings.append(U)
-        
-        self.strings = tf.cast(self.strings, dtype=precision)
 
+        self.strings = tf.cast(self.strings, dtype=precision)
 
     def fidelity(self):
         self.generate()
-        
+
         strings_tensor = tf.cast(self.strings, dtype=precision)
 
-        A = tf.linalg.einsum('a...ij,b...jk -> ab...ik', strings_tensor, tf.linalg.adjoint(strings_tensor))
+        A = tf.linalg.einsum(
+            "a...ij,b...jk -> ab...ik",
+            strings_tensor,
+            tf.linalg.adjoint(strings_tensor),
+        )
         A = tf.linalg.trace(A)
-        A = tf.abs(tf.math.reduce_prod(A, axis = 2))**2
-        
-        fid = (A + self.d)/(self.d**2 + self.d)
+        A = tf.abs(tf.math.reduce_prod(A, axis=2)) ** 2
 
-        fid = tf.linalg.set_diag(fid, tf.zeros_like(fid[:,0]))
-        fid = tf.math.reduce_max(fid, axis = 1)
-        fid = tf.math.reduce_sum(fid)/self.N
-        
+        fid = (A + self.d) / (self.d**2 + self.d)
+
+        fid = tf.linalg.set_diag(fid, tf.zeros_like(fid[:, 0]))
+        fid = tf.math.reduce_max(fid, axis=1)
+        fid = tf.math.reduce_sum(fid) / self.N
+
         return fid
-    
+
     def generate_circuits(self):
         unitary_list = []
         self.generate()
@@ -394,7 +408,9 @@ class HaarInput:
 
 
 class ExecuteAndCollect:
-    def setup_circuits(self, circuit_target_list=None, N_map=None, N_spam=None):
+    def setup_circuits(
+        self, circuit_target_list=None, N_map=None, N_spam=None, initial_layout=None
+    ):
         self.circuit_target_list = circuit_target_list
 
         self.n = len(circuit_target_list[0].qregs[0])
@@ -409,6 +425,11 @@ class ExecuteAndCollect:
             self.data_list.append(
                 [inputs_map, circuit_list_map, inputs_spam, circuit_list_spam]
             )
+
+        if initial_layout is None:
+            self.initial_layout = list(range(self.n))
+        else:
+            self.initial_layout = initial_layout
 
     def execute_circuits(
         self, backend, shots_map, shots_spam, filename=None, concatenate=False
@@ -458,6 +479,7 @@ class ExecuteAndCollect:
                     optimization_level=0,
                     seed_transpiler=42,
                     scheduling_method=scheduling_method,
+                    initial_layout=self.initial_layout,
                 )
 
                 job = backend.run(trans_circ_list, shots=shots)

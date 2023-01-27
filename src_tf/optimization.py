@@ -19,10 +19,12 @@ from set_precision import *
 
 
 class Logger:
-    def __init__(self, sample_freq=100, loss_function=None, loss_function_val=None, verbose=True):
+    def __init__(
+        self, sample_freq=100, loss_function=None, loss_function_val=None, verbose=True
+    ):
         self.sample_freq = sample_freq
         self.loss_function = loss_function
-        
+
         if loss_function_val is None:
             loss_function_val = loss_function
         self.loss_function_val = loss_function_val
@@ -37,7 +39,7 @@ class Logger:
             loss_train = None
             loss_train = np.real(
                 self.loss_function(other.channel, other.inputs, other.targets).numpy()
-             )
+            )
             self.loss_train_list.append(loss_train)
 
             loss_val = None
@@ -82,6 +84,7 @@ class ModelQuantumMap:
         targets_val=None,
         num_iter=1000,
         N=0,
+        verbose=True,
     ):
 
         self.inputs = inputs
@@ -92,8 +95,12 @@ class ModelQuantumMap:
 
         if N != 0:
             indices = list(range(targets.shape[0]))
+        if verbose:
+            decorator = tqdm
+        else:
+            decorator = lambda x: x
 
-        for step in tqdm(range(num_iter)):
+        for step in decorator(range(num_iter)):
             if N != 0:
                 batch = tf.random.shuffle(indices)[:N]
                 inputs_batch = [tf.gather(data, batch, axis=0) for data in inputs]
@@ -117,7 +124,7 @@ class ModelQuantumMap:
             self.counter += 1
 
         self.channel.generate_channel()
-        self.logger.log(self, push=True)
+        self.logger.log(self)
 
     def zero_optimizer(self):
         for var in self.optimizer.variables():
@@ -129,3 +136,60 @@ class ModelQuantumMap:
             self.loss_function = [self.loss_function]
         if zero_optimizer:
             self.zero_optimizer()
+
+    def spectrum(self, *args):
+        return self.channel.spectrum(*args)
+
+    def spectrum(self, **kwargs):
+        return self.channel.spectrum(**kwargs)
+
+
+def fit_model(
+    channel=None,
+    spam=None,
+    N_map=None,
+    N_spam=None,
+    num_iter_map=2000,
+    num_iter_spam=2000,
+    filename=None,
+    ratio=None,
+    verbose=False,
+):
+    inputs_map, targets_map, inputs_spam, targets_spam = pickle.load(
+        open(f"../../data/{filename}", "rb")
+    )
+
+    d = targets_map.shape[1]
+    n = int(np.log2(d))
+
+    if ratio is not None:
+        inputs_map, targets_map, _, _ = train_val_split(
+            inputs_map, targets_map, ratio=ratio
+        )
+
+    # spam.pretrain(num_iter = 300, verbose)
+
+    spam.train(
+        inputs=inputs_spam,
+        targets=targets_spam,
+        num_iter=num_iter_spam,
+        N=N_spam,
+        verbose=False,
+    )
+
+    channel.spam = spam
+    model = ModelQuantumMap(
+        channel=channel,
+        loss_function=ProbabilityMSE(),
+        optimizer=tf.optimizers.Adam(learning_rate=0.01),
+        logger=Logger(loss_function=ProbabilityMSE(), verbose=False),
+    )
+
+    model.train(
+        inputs=inputs_map,
+        targets=targets_map,
+        num_iter=num_iter_map,
+        N=N_map,
+        verbose=verbose,
+    )
+    return model
