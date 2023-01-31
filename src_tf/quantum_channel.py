@@ -79,14 +79,20 @@ def channel_to_choi(channel_list):
 """
 
 
-def channel_to_choi_map(channel_list):
+def channel_to_choi_map(channel_list, invert_list=None):
     if not isinstance(channel_list, list):
         channel_list = [channel_list]
 
+    if invert_list is None:
+        invert_list = [False] * len(channel_list)
+
     d = channel_list[0].d
-    super_operator_full = reshuffle(channel_list[0].choi)
-    for channel in channel_list[1:]:
+    super_operator_full = tf.eye(d**2, dtype=precision)
+
+    for channel, invert in zip(channel_list, invert_list):
         super_operator = reshuffle(channel.choi)
+        if invert:
+            super_operator = tf.linalg.inv(super_operator)
         super_operator_full = super_operator @ super_operator_full
 
     choi_map = ChoiMapStatic(super_operator_full)
@@ -181,9 +187,9 @@ class ChoiMap:
         self.super_operator = reshuffle(choi)
 
     def apply_channel(self, state):
-        state = tf.reshape(state, (-1, d**2, 1))
+        state = tf.reshape(state, (-1, self.d**2, 1))
         state = tf.matmul(self.super_operator, state)
-        state = tf.reshape(state, (-1, d, d))
+        state = tf.reshape(state, (-1, self.d, self.d))
 
         return state
 
@@ -201,9 +207,9 @@ class ChoiMapStatic(Channel):
         self.d = int(np.sqrt(super_operator.shape[0]))
 
     def apply_channel(self, state):
-        state = tf.reshape(state, (-1, d**2, 1))
+        state = tf.reshape(state, (-1, self.d**2, 1))
         state = tf.matmul(self.super_operator, state)
-        state = tf.reshape(state, (-1, d, d))
+        state = tf.reshape(state, (-1, self.d, self.d))
 
         return state
 

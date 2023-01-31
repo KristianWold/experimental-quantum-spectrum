@@ -137,9 +137,6 @@ class ModelQuantumMap:
         if zero_optimizer:
             self.zero_optimizer()
 
-    def spectrum(self, *args):
-        return self.channel.spectrum(*args)
-
     def spectrum(self, **kwargs):
         return self.channel.spectrum(**kwargs)
 
@@ -149,6 +146,8 @@ def fit_model(
     spam=None,
     N_map=None,
     N_spam=None,
+    loss_function=None,
+    num_iter_pretrain=300,
     num_iter_map=2000,
     num_iter_spam=2000,
     filename=None,
@@ -160,14 +159,14 @@ def fit_model(
     )
 
     d = targets_map.shape[1]
-    n = int(np.log2(d))
 
     if ratio is not None:
         inputs_map, targets_map, _, _ = train_val_split(
             inputs_map, targets_map, ratio=ratio
         )
 
-    # spam.pretrain(num_iter = 300, verbose)
+    if num_iter_pretrain != 0:
+        spam.pretrain(num_iter=num_iter_pretrain, verbose=False)
 
     spam.train(
         inputs=inputs_spam,
@@ -180,9 +179,9 @@ def fit_model(
     channel.spam = spam
     model = ModelQuantumMap(
         channel=channel,
-        loss_function=ProbabilityMSE(),
+        loss_function=loss_function,
         optimizer=tf.optimizers.Adam(learning_rate=0.01),
-        logger=Logger(loss_function=ProbabilityMSE(), verbose=False),
+        logger=Logger(loss_function=loss_function, verbose=False),
     )
 
     model.train(
@@ -192,4 +191,6 @@ def fit_model(
         N=N_map,
         verbose=verbose,
     )
+    model.optimizer = None
+    spam.optimizer = None
     return model

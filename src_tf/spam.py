@@ -186,7 +186,6 @@ class SPAM:
         print(np.abs(loss.numpy()))
 
         self.generate_SPAM()
-        self.optimizer = None
 
     def pretrain(self, num_iter, targets=[None, None], verbose=True):
         init_target, povm_target = targets

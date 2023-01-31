@@ -5,6 +5,7 @@ import multiprocessing as mp
 import random
 import tensorflow as tf
 import pickle
+import os
 from set_precision import *
 
 from qiskit.quantum_info import DensityMatrix
@@ -76,3 +77,15 @@ def loader(filename):
     object = pickle.load(open(filename, "rb"))
 
     return object
+
+
+DATA_ID = "../../data"
+FIGURE_ID = "../../latex/figures"
+
+
+def image_path(fig_id):
+    return os.path.join(FIGURE_ID, fig_id)
+
+
+def data_path(data_id):
+    return os.path.join(DATA_ID, data_id)
