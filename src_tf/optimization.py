@@ -100,7 +100,7 @@ class ModelQuantumMap:
         else:
             decorator = lambda x: x
 
-        for step in decorator(range(num_iter)):
+        for step in tqdm(range(num_iter)):
             if N != 0:
                 batch = tf.random.shuffle(indices)[:N]
                 inputs_batch = [tf.gather(data, batch, axis=0) for data in inputs]
@@ -193,4 +193,9 @@ def fit_model(
     )
     model.optimizer = None
     spam.optimizer = None
+    model.inputs = None
+    model.targets = None
+    model.inputs_val = None
+    model.targets_val = None
+
     return model
