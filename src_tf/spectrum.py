@@ -15,7 +15,7 @@ from set_precision import *
 from quantum_channel import *
 
 
-def channel_spectrum(input, use_coords=True, keep_real=True, keep_unity=True, tol=1e-6):
+def channel_spectrum(input, use_coords=True, keep_real=True, keep_unity=True, tol=1e-4):
     if isinstance(input, Channel):
         eig, _ = tf.linalg.eig(reshuffle(input.choi))
         eig = tf.expand_dims(eig, axis=1)

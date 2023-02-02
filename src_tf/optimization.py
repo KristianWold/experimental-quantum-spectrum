@@ -153,12 +153,20 @@ def fit_model(
     filename=None,
     ratio=None,
     verbose=False,
+    counts=False,
 ):
-    inputs_map, targets_map, inputs_spam, targets_spam = pickle.load(
-        open(f"../../data/{filename}", "rb")
-    )
-
-    d = targets_map.shape[1]
+    if not counts:
+        inputs_map, targets_map, inputs_spam, targets_spam = pickle.load(
+            open(f"../../data/{filename}", "rb")
+        )
+    else:
+        inputs_map, inputs_spam, counts = pickle.load(
+            open(f"../../data/{filename}", "rb")
+        )
+        targets = counts_to_probs(counts)
+        N = inputs_map[0].shape[0]
+        targets_map = targets[:N]
+        targets_spam = targets[N:]
 
     if ratio is not None:
         inputs_map, targets_map, _, _ = train_val_split(
