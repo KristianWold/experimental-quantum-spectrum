@@ -182,7 +182,9 @@ class SPAM:
             grads = tape.gradient(loss, self.parameter_list)
             self.optimizer.apply_gradients(zip(grads, self.parameter_list))
             if verbose:
-                print(step, np.abs(loss.numpy()))
+                if step%100 == 0:
+                    print("step {}: loss = {:.4f}".format(step, np.real(loss.numpy())))
+
         print(np.abs(loss.numpy()))
 
         self.generate_SPAM()

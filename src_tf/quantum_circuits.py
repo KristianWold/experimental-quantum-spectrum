@@ -8,6 +8,8 @@ from qiskit.quantum_info import DensityMatrix
 from qiskit.quantum_info import Operator
 from scipy.linalg import sqrtm
 from tqdm.notebook import tqdm
+from qiskit.circuit.library import iSwapGate
+
 
 
 def pqc_basic(n, L):
@@ -65,28 +67,28 @@ def pqc_more_expressive(n, L):
 
 
 def integrabel_clifford(n, L):
-    circuit = qk.QuantumCircuit(n)
-    for i in range(L):
-        for j in range(n):
-            circuit.z(j)
+    theta_list = [np.random.uniform(-np.pi, np.pi, 3 * n) for i in range(L)]
+    sqrt_iSWAP = iSwapGate().power(1/2)
 
-        # apply cnots
-        for j in range(n // 2):
-            circuit.cnot(2 * j, 2 * j + 1)
+    circuit = qk.QuantumCircuit(n)
+    for theta in theta_list:
+        for i in range(n):
+            circuit.rz(theta[i], i)
+
+        for i in range(n//2):
+            circuit.append(sqrt_iSWAP, [2*i, 2*i+1])
+
+        for i in range(n):
+            circuit.rz(theta[n+i], i)
+
+        for i in range((n-1)//2):
+            circuit.append(sqrt_iSWAP, [2*i+1, 2*i+2])
+        
+        for i in range(n):
+            circuit.rz(theta[2*n+i], i)
+
+        for i in range(n//2):
+            circuit.append(sqrt_iSWAP, [2*i, 2*i+1])
 
     return circuit
 
-
-"""
-def integrabel_clifford(n, L):
-    circuit = qk.QuantumCircuit(n)
-    for i in range(L):
-        for j in range(n):
-            circuit.z(j)
-
-        # apply cnots
-        for j in range(n // 2):
-            circuit.(2 * j, 2 * j + 1)
-
-    return circuit
-"""

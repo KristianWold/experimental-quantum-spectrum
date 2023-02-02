@@ -216,3 +216,43 @@ class ChoiMapStatic(Channel):
     @property
     def choi(self):
         return reshuffle(self.super_operator)
+
+
+class LinearMap:
+    def __init__(
+        self,
+        d=None,
+        rank=None,
+        spam=None,
+        trainable=True,
+        generate=True,
+    ):
+
+        self.d = d
+        self.rank = rank
+
+        if spam is None:
+            spam = SPAM(d=d, init=init_ideal(d), povm=povm_ideal(d))
+        self.spam = spam
+
+        _, self.A, self.B = generate_ginibre(d**2, d**2, trainable=trainable)
+        self.parameter_list = [self.A, self.B]
+
+        self.super_operator = None
+        if generate:
+            self.generate_channel()
+
+    def generate_channel(self):
+        G = tf.complex(self.A, self.B)
+        self.super_operator = G
+
+    def apply_channel(self, state):
+        state = tf.reshape(state, (-1, self.d**2, 1))
+        state = tf.matmul(self.super_operator, state)
+        state = tf.reshape(state, (-1, self.d, self.d))
+
+        return state
+
+    @property
+    def choi(self):
+        return reshuffle(self.super_operator)
