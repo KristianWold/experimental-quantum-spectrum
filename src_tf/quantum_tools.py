@@ -201,3 +201,8 @@ def spectrum_to_radial(spectrum):
 def spectrum_to_angular(spectrum):
     angular = tf.math.angle(spectrum[:-1, 0] + 1j * spectrum[:-1, 1])
     return angular
+
+
+def generate_haar_random(d, rng=np.random.default_rng()):
+    U = tf.cast(Operator(random_unitary(d, seed=rng).data), dtype=precision)
+    return U
