@@ -55,30 +55,6 @@ def effective_rank(channel):
     return rank_eff
 
 
-"""
-def channel_to_choi(channel_list):
-    if not isinstance(channel, list):
-        channel_list = [channel_list]
-
-    d = channel_list[0].d
-    choi = tf.zeros((d**2, d**2), dtype=precision)
-    M = np.zeros((d**2, d, d))
-    for i in range(d):
-        for j in range(d):
-
-            M[d * i + j, i, j] = 1
-
-    M = tf.convert_to_tensor(M, dtype=precision)
-    M_prime = tf.identity(M)
-    for channel in channel_list:
-        M_prime = channel.apply_channel(M_prime)
-    for i in range(d**2):
-        choi += tf.experimental.numpy.kron(M_prime[i], M[i])
-
-    return choi
-"""
-
-
 def channel_to_choi_map(channel_list, invert_list=None):
     if not isinstance(channel_list, list):
         channel_list = [channel_list]
@@ -149,7 +125,7 @@ class Channel:
         pass
 
 
-class ChoiMap:
+class ChoiMap(Channel):
     def __init__(
         self,
         d=None,

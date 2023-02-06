@@ -108,20 +108,15 @@ class DilutedKrausMap(KrausMap):
         U=None,
         c=None,
         kraus_part=None,
-        d=None,
-        rank=None,
         spam=None,
         trainable=True,
         generate=True,
     ):
 
-        self.d = d
-        self.rank = rank
+        self.d = U.shape[0]
+        self.rank = kraus_part.rank
         self.spam = spam
         self.kraus_part = kraus_part
-
-        if self.kraus_part is None:
-            self.kraus_part = KrausMap(d, rank, trainable=trainable)
 
         self.parameter_list = self.kraus_part.parameter_list
 

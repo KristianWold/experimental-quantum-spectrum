@@ -15,11 +15,15 @@ from set_precision import *
 
 def partial_trace(state, discard_first=True):
     d = int(np.sqrt(state.shape[1]))
-    state = tf.reshape(state, (-1, d, d, d, d))
+    if len(state.shape) == 2:
+        state = tf.reshape(state, (d, d, d, d))
+    if len(state.shape) == 3:
+        state = tf.reshape(state, (-1, d, d, d, d))
+    
     if discard_first:
-        state = tf.einsum("bijik->bjk", state)
+        state = tf.einsum("...ijik->...jk", state)
     else:
-        state = tf.einsum("bjiki->bjk", state)
+        state = tf.einsum("...jiki->...jk", state)
     return state
 
 
