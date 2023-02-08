@@ -134,12 +134,12 @@ class SpectrumDistance:
 
     def __call__(self, channel, input, target):
         spectrum_target = input[0]
-        spectrum_model = channel_spectrum(channel, real=True)
+        spectrum_model = channel_spectrum(channel)
 
         if self.mode == "density":
             loss = self.overlap(spectrum_model, spectrum_model)
             loss += -2 * self.overlap(spectrum_model, spectrum_target)
-            loss += self.overlap(spectrum_target, spectrum_target)
+            #loss += self.overlap(spectrum_target, spectrum_target)
 
         if self.mode == "pairwise":
             connections = greedy_pair_distance(spectrum_model, spectrum_target)
