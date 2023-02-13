@@ -231,8 +231,8 @@ class AnnulusDistance:
         distance = (
             tf.math.abs(r_mean1 - r_mean2)
             + tf.math.abs(r_std1 - r_std2)
-            + tf.math.abs(a_mean1 - a_mean2)
-            + tf.math.abs(a_std1 - a_std2)
+           # + tf.math.abs(a_mean1 - a_mean2)
+        #    + tf.math.abs(a_std1 - a_std2)
         )
 
         return distance
@@ -242,11 +242,11 @@ class AnnulusDistance:
         r_mean = tf.math.reduce_mean(radial)
         r_std = tf.math.reduce_std(radial)
 
-        angular = spectrum_to_angular(spectrum) / (2 * np.pi)
-        a_mean = tf.math.reduce_mean(angular)
-        a_std = tf.math.reduce_std(angular)
+     #   angular = spectrum_to_angular(spectrum) / (2 * np.pi)
+     #   a_mean = tf.math.reduce_mean(angular)
+     #   a_std = tf.math.reduce_std(angular)
 
-        return r_mean, r_std, a_mean, a_std
+        return r_mean, r_std, _, _
 
 
 # Regularizers
