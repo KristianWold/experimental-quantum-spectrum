@@ -139,7 +139,7 @@ class ChoiMap(Channel):
         self.rank = rank
 
         if spam is None:
-            spam = SPAM(d=d, init=init_ideal(d), povm=povm_ideal(d))
+            spam = IdealSPAM(self.d)
         self.spam = spam
         self.I = tf.eye(d, dtype=precision)
 
@@ -178,10 +178,48 @@ class ChoiMap(Channel):
 class ChoiMapStatic(Channel):
     def __init__(
         self,
-        super_operator=None,
+        X=None,
+        mode="super_operator",
+        spam = None,
     ):
-        self.super_operator = super_operator
-        self.d = int(np.sqrt(super_operator.shape[0]))
+        if mode == "super_operator":
+            self.super_operator = X
+        if mode == "choi":
+            self.super_operator = reshuffle(X)
+        if mode == "unitary":
+            X = tf.cast(X, precision)
+            self.super_operator = kron(X, tf.math.conj(X))
+
+        self.d = int(np.sqrt(self.super_operator.shape[0]))
+
+        if spam is None:
+            spam = IdealSPAM(self.d)
+        self.spam = spam
+
+    def apply_channel(self, state):
+        state = tf.reshape(state, (-1, self.d**2, 1))
+        state = tf.matmul(self.super_operator, state)
+        state = tf.reshape(state, (-1, self.d, self.d))
+
+        return state
+
+    @property
+    def choi(self):
+        return reshuffle(self.super_operator)
+
+
+class ReplacementChannel(Channel):
+    def __init__(self, 
+                 d=None, 
+                 spam=None):
+        self.d = d
+        if spam is None:
+            spam = IdealSPAM(self.d)
+        self.spam = spam
+
+        choi = tf.eye(d**2, dtype=precision)/self.d
+        self.super_operator = reshuffle(choi)
+
 
     def apply_channel(self, state):
         state = tf.reshape(state, (-1, self.d**2, 1))
