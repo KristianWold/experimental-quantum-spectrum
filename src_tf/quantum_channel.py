@@ -180,7 +180,7 @@ class ChoiMapStatic(Channel):
         self,
         X=None,
         mode="super_operator",
-        spam = None,
+        spam=None,
     ):
         if mode == "super_operator":
             self.super_operator = X
@@ -209,22 +209,38 @@ class ChoiMapStatic(Channel):
 
 
 class ReplacementChannel(Channel):
-    def __init__(self, 
-                 d=None, 
-                 spam=None):
+    def __init__(self, d=None, spam=None):
         self.d = d
         if spam is None:
             spam = IdealSPAM(self.d)
         self.spam = spam
 
-        choi = tf.eye(d**2, dtype=precision)/self.d
+        choi = tf.eye(d**2, dtype=precision) / self.d
         self.super_operator = reshuffle(choi)
-
 
     def apply_channel(self, state):
         state = tf.reshape(state, (-1, self.d**2, 1))
         state = tf.matmul(self.super_operator, state)
         state = tf.reshape(state, (-1, self.d, self.d))
+
+        return state
+
+    @property
+    def choi(self):
+        return reshuffle(self.super_operator)
+
+
+class IdentityChannel(Channel):
+    def __init__(self, d=None, spam=None):
+        self.d = d
+        if spam is None:
+            spam = IdealSPAM(self.d)
+        self.spam = spam
+
+        # choi =
+        # self.super_operator = reshuffle(choi)
+
+    def apply_channel(self, state):
 
         return state
 

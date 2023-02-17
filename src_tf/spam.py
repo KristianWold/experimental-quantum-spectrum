@@ -30,7 +30,7 @@ def generate_corruption_matrix(counts_list):
 
 
 class InitialState:
-    def __init__(self, d, c=0.9, trainable=True):
+    def __init__(self, d, c=None, trainable=True):
         self.d = d
 
         self.A = tf.cast(tf.random.normal((d, d), 0, 1), dtype=precision)
@@ -65,7 +65,7 @@ class InitialState:
 
 
 class POVM:
-    def __init__(self, d, c=0.9, trainable=True):
+    def __init__(self, d, c=None, trainable=True):
         self.d = d
         self.A = tf.cast(tf.random.normal((d, d, d), 0, 1), dtype=precision)
         self.B = tf.cast(tf.random.normal((d, d, d), 0, 1), dtype=precision)
@@ -101,7 +101,7 @@ class POVM:
 
 
 class CorruptionMatrix:
-    def __init__(self, d, c=0.9, trainable=True):
+    def __init__(self, d, c=None, trainable=True):
         self.d = d
         self.A = tf.cast(tf.random.normal((d, d), 0, 1), dtype=precision)
         self.povm_ideal = povm_ideal(d)
@@ -182,7 +182,7 @@ class SPAM:
             grads = tape.gradient(loss, self.parameter_list)
             self.optimizer.apply_gradients(zip(grads, self.parameter_list))
             if verbose:
-                if step%100 == 0:
+                if step % 100 == 0:
                     print("step {}: loss = {:.4f}".format(step, np.real(loss.numpy())))
 
         print(np.abs(loss.numpy()))
