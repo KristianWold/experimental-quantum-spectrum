@@ -38,14 +38,13 @@ class CompactLindbladMap(Channel):
         self.I = tf.cast(tf.eye(d), dtype=precision)
 
         if spam is None:
-            spam = SPAM(init=InitialState(d, c=0.99999), povm=POVM(d, c=0.99999))
+            spam = IdealSPAM(d)
         self.spam = spam
 
         _, self.A, self.B = generate_ginibre(d, d, trainable=trainable)
-        _, self.C, self.D = generate_ginibre(d**2, rank - 1, trainable=trainable)
-        _, self.a, _ = generate_ginibre(1, 1, trainable=trainable, complex=False)
+        _, self.C, self.D = generate_ginibre(d**2, rank, trainable=trainable)
 
-        self.parameter_list = [self.A, self.B, self.C, self.D, self.a]
+        self.parameter_list = [self.A, self.B, self.C, self.D]
 
         self.super_operator = None
         if generate:
@@ -175,7 +174,6 @@ class ExplicitLindbladMap(Channel):
         return reshuffle(self.super_operator)
 
 
-
 class TracelessLindbladMap(Channel):
     def __init__(
         self,
@@ -211,12 +209,10 @@ class TracelessLindbladMap(Channel):
 
         if jump_operators_trainable:
             self.parameter_list += self.A_list + self.B_list
-        
 
         self.super_operator = None
         if generate:
             self.generate_channel()
-            
 
     def generate_channel(self):
         H = self.generate_hamiltonian()
@@ -226,9 +222,8 @@ class TracelessLindbladMap(Channel):
         LL = 0
         for i, L in enumerate(L_list):
             L2 = tf.matmul(L, L, adjoint_a=True)
-            LL += (
-                kron(L, tf.math.conj(L))
-                - 0.5 * ((kron(L2, self.I) + kron(self.I, tf.math.conj(L2))))
+            LL += kron(L, tf.math.conj(L)) - 0.5 * (
+                (kron(L2, self.I) + kron(self.I, tf.math.conj(L2)))
             )
 
         self.super_operator = tf.linalg.expm(HH + self.weight * LL)
@@ -248,11 +243,10 @@ class TracelessLindbladMap(Channel):
     def generate_jump_operators(self):
         L_list = [tf.complex(A, B) for A, B in zip(self.A_list, self.B_list)]
 
-        L_list = [L-tf.linalg.trace(L) for L in L_list]
+        L_list = [L - tf.linalg.trace(L) for L in L_list]
 
         return L_list
 
     @property
     def choi(self):
         return reshuffle(self.super_operator)
-
