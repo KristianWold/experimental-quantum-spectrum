@@ -95,7 +95,7 @@ def integrabel_circuit(n, L, use_hadamard=False):
     return circuit
 
 
-def nonintegrabel_circuit(n, L, use_hadamard=False):
+def nonintegrabel_circuit(n, L, use_hadamard=False, use_sqrtSwap=True):
     index_list = [np.random.randint(0, 8, 3 * n) for i in range(L)]
     gate_list = [
         XGate().power(1 / 2),
@@ -107,7 +107,10 @@ def nonintegrabel_circuit(n, L, use_hadamard=False):
         YGate().power(1 / 4),
         YGate().power(-1 / 4),
     ]
-    sqrt_iSWAP = iSwapGate().power(1 / 2)
+    if use_sqrtSwap:
+        ent_gate = iSwapGate().power(1 / 2)
+    else:
+        ent_gate = iSwapGate()
 
     circuit = qk.QuantumCircuit(n)
     if use_hadamard:
@@ -119,18 +122,18 @@ def nonintegrabel_circuit(n, L, use_hadamard=False):
             circuit.append(gate_list[index[i]], [i])
 
         for i in range(n // 2):
-            circuit.append(sqrt_iSWAP, [2 * i, 2 * i + 1])
+            circuit.append(ent_gate, [2 * i, 2 * i + 1])
 
         for i in range(n):
             circuit.append(gate_list[index[n + i]], [i])
 
         for i in range((n - 1) // 2):
-            circuit.append(sqrt_iSWAP, [2 * i + 1, 2 * i + 2])
+            circuit.append(ent_gate, [2 * i + 1, 2 * i + 2])
 
         for i in range(n):
             circuit.append(gate_list[index[2 * n + i]], [i])
 
         for i in range(n // 2):
-            circuit.append(sqrt_iSWAP, [2 * i, 2 * i + 1])
+            circuit.append(ent_gate, [2 * i, 2 * i + 1])
 
     return circuit

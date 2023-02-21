@@ -33,8 +33,8 @@ class InitialState:
     def __init__(self, d, c=None, trainable=True):
         self.d = d
 
-        self.A = tf.cast(tf.random.normal((d, d), 0, 1), dtype=precision)
-        self.B = tf.cast(tf.random.normal((d, d), 0, 1), dtype=precision)
+        self.A = tf.random.normal((d, d), 0, 1, dtype=tf.float64)
+        self.B = tf.random.normal((d, d), 0, 1, dtype=tf.float64)
         self.init_ideal = init_ideal(d)
 
         if trainable:
@@ -53,7 +53,7 @@ class InitialState:
         self.generate_init()
 
     def generate_init(self):
-        G = self.A + 1j * self.B
+        G = tf.complex(self.A, self.B)
         AA = tf.matmul(G, G, adjoint_b=True)
         self.init = AA / tf.linalg.trace(AA)
         if self.k is not None:
@@ -67,8 +67,8 @@ class InitialState:
 class POVM:
     def __init__(self, d, c=None, trainable=True):
         self.d = d
-        self.A = tf.cast(tf.random.normal((d, d, d), 0, 1), dtype=precision)
-        self.B = tf.cast(tf.random.normal((d, d, d), 0, 1), dtype=precision)
+        self.A = tf.random.normal((d, d, d), 0, 1, dtype=tf.float64)
+        self.B = tf.random.normal((d, d, d), 0, 1, dtype=tf.float64)
         self.povm_ideal = povm_ideal(d)
 
         if trainable:
@@ -87,7 +87,7 @@ class POVM:
         self.generate_POVM()
 
     def generate_POVM(self):
-        G = self.A + 1j * self.B
+        G = tf.complex(self.A, self.B)
         AA = tf.matmul(G, G, adjoint_b=True)
         D = tf.math.reduce_sum(AA, axis=0)
         invsqrtD = tf.linalg.inv(tf.linalg.sqrtm(D))
@@ -103,7 +103,7 @@ class POVM:
 class CorruptionMatrix:
     def __init__(self, d, c=None, trainable=True):
         self.d = d
-        self.A = tf.cast(tf.random.normal((d, d), 0, 1), dtype=precision)
+        self.A = tf.random.normal((d, d), 0, 1, dtype=tf.float64)
         self.povm_ideal = povm_ideal(d)
 
         if trainable:

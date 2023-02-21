@@ -19,7 +19,7 @@ def partial_trace(state, discard_first=True):
         state = tf.reshape(state, (d, d, d, d))
     if len(state.shape) == 3:
         state = tf.reshape(state, (-1, d, d, d, d))
-    
+
     if discard_first:
         state = tf.einsum("...ijik->...jk", state)
     else:
@@ -195,6 +195,14 @@ def add_noise_to_probs(tensor, noise=0.01):
     tensor = tensor / tf.math.reduce_sum(tensor, axis=1, keepdims=True)
 
     return tensor
+
+
+def add_shot_noise(probs, shots):
+    probs = tf.cast(probs, dtype=tf.float64)
+    samples = tf.random.categorical(tf.math.log(probs), shots)
+    samples = tf.one_hot(samples, probs.shape[1], dtype=precision)
+    probs_w_noise = tf.math.reduce_mean(samples, axis=1)
+    return probs_w_noise
 
 
 def spectrum_to_radial(spectrum):
