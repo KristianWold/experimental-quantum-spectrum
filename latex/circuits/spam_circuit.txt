@@ -1,0 +1,32 @@
+\begin{quantikz}[row sep={0.8cm,between origins}]
+\lstick[wires=3]{$\rho_0$}& \gate[style={fill=red!20}][0.8cm]{I}\gategroup[3,steps=1,style={dashed, rounded corners,fill=blue!20, inner xsep=2pt}, background]{$R_{\Vec{s}}$} &  \meter{$ \{E_i\}$} \rstick[3]{$ \rightarrow Tr[E_i R_{\Vec{s}} \rho_0 R_{\Vec{s}}^{\dagger}] = p_i$}& \\
+                          & \gate[style={fill=red!20}][0.8cm]{X_{\pi}}                                                                                                        &  \meter                                                                                              & \\
+                          & \gate[style={fill=red!20}][0.8cm]{Y_{\frac{\pi}{2}}}                                                                                              &  \meter                                                                                              &                                                                          
+\end{quantikz}
+
+\begin{quantikz}[row sep={0.8cm,between origins}]
+\lstick[wires=3]{$\rho_0$}& \gate[style={fill=red!20}][0.8cm]{I}\gategroup[3,steps=1,style={dashed, rounded corners,fill=blue!20, inner xsep=2pt}, background]{$R_{\Vec{s}}$}                & \gate[wires=3][1cm]{T}               & \gate[style={fill=green!20}][0.8cm]{Y_{-\frac{\pi}{2}}}\gategroup[3,steps=1,style={dashed, rounded corners,fill=blue!20, inner xsep=2pt}, background]{$R_{\Vec{b}}$} & \meter{$ \{E_i\}$} \rstick[3]{$ \rightarrow Tr[E_i R_{\Vec{b}}T(R_{\Vec{s}} \rho_0 R_{\Vec{s}}^{\dagger})R_{\Vec{b}}^{\dagger}] = p_i$}& \\
+                          & \gate[style={fill=red!20}][0.8cm]{X_{\pi}}                                                                                                                       &                                      & \gate[style={fill=green!20}][0.8cm]{X_{\pi}}                                                                                                                         & \meter                                                                                                                                 & \\
+                          & \gate[style={fill=red!20}][0.8cm]{Y_{\frac{\pi}{2}}}                                                                                                             &                                      & \gate[style={fill=green!20}][0.8cm]{I}                                                                                                                               & \meter                                                                                                                                 &                                                                           
+\end{quantikz}
+
+
+\begin{quantikz}[row sep={0.8cm,between origins}]
+                          & \gate{R_y(\theta_1)}                      & \gate{R_z(\theta_4)}               & \ctrl{1}    & \qw      \\
+                          & \gate{R_y(\theta_2)}                      & \gate{R_z(\theta_5)}               & \targ{}  & \ctrl{1} \\
+                          & \gate{R_y(\theta_3)}                      & \gate{R_z(\theta_6)}               & \qw         & \targ{}                                                                          
+\end{quantikz}
+
+
+\begin{quantikz}[row sep={0.8cm,between origins}]
+                          & \gate[wires=3][1cm]{\boldsymbol{\theta}}& \qw \\
+                          &                                         & \qw\\
+                          &                                         & \qw                                                                      
+\end{quantikz}
+
+
+\begin{quantikz}[row sep={0.8cm,between origins}]
+                          & \gate[wires=3][1cm]{\boldsymbol{\theta}^{(1)}}& \qw  \cdots & \gate[wires=3][1cm]{\boldsymbol{\theta}^{(L)}} & \gate[wires=3][1cm]{\textsc{delay}(t)} & \qw \\
+                          &                                               & \qw  \cdots &                                                &                                        &\qw \\
+                          &                                               & \qw  \cdots &                                                &                                        &\qw                    
+\end{quantikz}
