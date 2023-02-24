@@ -31,7 +31,7 @@ def find_outer_inner_R(spectrum_list, tail_num=10):
         R_plus = np.mean(radial_list[:, -1])
         R_plus_std = np.std(radial_list[:, -1])
     else:
-        radial_list = np.array(np.sort(spectrum_to_radial(spectrum_list)))
+        radial_list = np.sort(spectrum_to_radial(spectrum_list))
         R_minus = np.mean(radial_list[:tail_num])
         R_minus_std = np.std(radial_list[:tail_num])
         R_plus = np.mean(radial_list[-tail_num:])

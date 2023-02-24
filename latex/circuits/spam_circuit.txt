@@ -30,3 +30,11 @@
                           &                                               & \qw  \cdots &                                                &                                        &\qw \\
                           &                                               & \qw  \cdots &                                                &                                        &\qw                    
 \end{quantikz}
+
+\begin{quantikz}[row sep={0.8cm,between origins}]
+                          & \gate[wires=3][1cm]{\boldsymbol{\theta}^{(1)}}& \qw  \cdots & \gate[wires=3][1cm]{\boldsymbol{\theta}^{(L)}} & \gate[wires=3][1cm]{\textsc{delay}(t)} & \qw \\
+                          &                                               & \qw  \cdots &                                                &                                        &\qw \\
+                          &                                               & \qw  \cdots &                                                &                                        &\qw 
+                          &                                               & \qw  \cdots &                                                &                                        &\qw                    
+\end{quantikz}                   
+
