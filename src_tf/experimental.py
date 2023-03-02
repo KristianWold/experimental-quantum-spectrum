@@ -8,6 +8,7 @@ from scipy.linalg import sqrtm
 from tqdm.notebook import tqdm
 
 from quantum_tools import *
+from quantum_channel import *
 from utils import *
 from set_precision import *
 
@@ -405,6 +406,85 @@ class HaarInput:
         self.generate()
         unitary_list = self.strings
         return None, unitary_list
+
+
+class SphereStrings:
+    def __init__(self, n, N):
+        self.n = n
+        self.d = 2**n
+        self.N = N
+
+        self.I = tf.convert_to_tensor([[1, 0], [0, 1]], dtype=precision)
+        self.I = tf.repeat(self.I[None, :, :], self.n, axis=0)
+        self.I = tf.repeat(self.I[None, :, :, :], self.N, axis=0)
+
+        self.X = tf.convert_to_tensor([[0, 1], [1, 0]], dtype=precision)
+        self.X = tf.repeat(self.X[None, :, :], self.n, axis=0)
+        self.X = tf.repeat(self.X[None, :, :, :], self.N, axis=0)
+
+        self.Y = tf.convert_to_tensor([[0, -1j], [1j, 0]], dtype=precision)
+        self.Y = tf.repeat(self.Y[None, :, :], self.n, axis=0)
+        self.Y = tf.repeat(self.Y[None, :, :, :], self.N, axis=0)
+
+        # self.parameters = tf.random.normal((self.N, 2 * self.n, 1, 1), 0, 1)
+        self.parameters = tf.random.uniform((self.N, 2 * self.n, 1, 1), -np.pi, np.pi)
+        self.parameters = tf.Variable(self.parameters, trainable=True)
+        self.parameter_list = [self.parameters]
+
+    def generate(self):
+        self.angles = tf.cast(self.parameters, dtype=precision)
+        # self.angles = tf.cast(2*np.pi*tf.math.tanh(self.parameters), dtype = precision)
+        rx = (
+            tf.math.cos(self.angles[:, 0 : self.n] / 2) * self.I
+            - 1j * tf.math.sin(self.angles[:, 0 : self.n] / 2) * self.X
+        )
+        ry = (
+            tf.math.cos(self.angles[:, self.n :] / 2) * self.I
+            - 1j * tf.math.sin(self.angles[:, self.n :] / 2) * self.Y
+        )
+        self.strings = ry @ rx
+
+    def fidelity(self):
+        self.generate()
+        psi_list = []
+        for i in range(self.N):
+            psi_list.append(kron(*self.strings[i, :, :, 0]))
+        psi = tf.expand_dims(tf.stack(psi_list, axis=0), axis=2)
+        rho1 = psi @ tf.linalg.adjoint(psi)
+        rho2 = tf.stack([kron(rho1[i], rho1[i]) for i in range(self.N)], axis=0)
+
+        p1 = state_purity(tf.math.reduce_mean(rho1, axis=0))
+        p2 = state_purity(tf.math.reduce_mean(rho2, axis=0))
+        fid = (p1 + p2) / 2
+        return fid
+
+    def generate_circuits(self, grid=False):
+        circuit_list = []
+        unitary_list = []
+        self.generate()
+        angles = np.real(self.angles.numpy()[:, :, 0, 0])
+        for i in range(self.N):
+            q_reg = qk.QuantumRegister(self.n)
+            circuit = qk.QuantumCircuit(q_reg)
+            for j in range(self.n):
+                circuit.rx(angles[i, j], j)
+                circuit.ry(angles[i, j + self.n], j)
+            circuit_list.append(circuit)
+            unitary_list.append(Operator(circuit.reverse_bits()).data)
+
+        unitary_list = tf.convert_to_tensor(unitary_list, dtype=precision)
+        return circuit_list, unitary_list
+
+    def optimize(self, steps):
+        optimizer = tf.keras.optimizers.Adam(learning_rate=0.01)
+        for i in tqdm(range(steps)):
+            with tf.GradientTape(watch_accessed_variables=False) as tape:
+                tape.watch(self.parameters)
+
+                loss = self.fidelity()
+                grads = tape.gradient(loss, self.parameter_list)
+                optimizer.apply_gradients(zip(grads, self.parameter_list))
+            print(loss)
 
 
 class ExecuteAndCollect:

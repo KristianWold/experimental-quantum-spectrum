@@ -35,6 +35,15 @@ def kron(*args):
     return A
 
 
+def tf_kron(A, num_axes=2):
+    length = len(args)
+    A = args[0]
+    for i in range(1, length):
+        A = tf.experimental.numpy.kron(A, args[i])
+
+    return A
+
+
 def index_generator(n, N=None, trace=True):
 
     index_list1 = np.arange(0, 6**n)
