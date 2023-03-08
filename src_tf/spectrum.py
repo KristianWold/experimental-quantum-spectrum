@@ -57,3 +57,8 @@ def normalize_spectrum(spectrum, scale=1):
     spectrum = tf.cast(tf.convert_to_tensor(spectrum), dtype=precision)
 
     return spectrum
+
+
+def complex_spacing_ratio(spectrum):
+    distance = tf.matmul(spectrum, spectrum, adjoint_b=True)
+
