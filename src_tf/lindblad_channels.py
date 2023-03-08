@@ -241,9 +241,10 @@ class TracelessLindbladMap(Channel):
         return H
 
     def generate_jump_operators(self):
+        d = self.A_list[0].shape[0]
         L_list = [tf.complex(A, B) for A, B in zip(self.A_list, self.B_list)]
 
-        L_list = [L - tf.linalg.trace(L) for L in L_list]
+        L_list = [L - tf.linalg.trace(L) * tf.eye(d) for L in L_list]
 
         return L_list
 

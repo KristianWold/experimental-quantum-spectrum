@@ -8,7 +8,7 @@ from qiskit.quantum_info import DensityMatrix
 from qiskit.quantum_info import Operator
 from scipy.linalg import sqrtm
 from tqdm.notebook import tqdm
-from qiskit.circuit.library import iSwapGate, XGate, YGate
+from qiskit.circuit.library import iSwapGate, XGate, YGate, HGate, CXGate
 
 
 def pqc_basic(n, L):
@@ -135,5 +135,31 @@ def nonintegrabel_circuit(n, L, use_hadamard=False, use_sqrtSwap=True):
 
         for i in range(n // 2):
             circuit.append(ent_gate, [2 * i, 2 * i + 1])
+
+    return circuit
+
+
+def clifford_circuit(n, L, use_hadamard=False):
+    index_list = [np.random.randint(0, 3, 2 * n) for i in range(L)]
+    gate_list = [XGate(), YGate(), HGate()]
+    ent_gate = CXGate()
+
+    circuit = qk.QuantumCircuit(n)
+    if use_hadamard:
+        for i in range(n):
+            circuit.h(i)
+
+    for index in index_list:
+        for i in range(n):
+            circuit.append(gate_list[index[i]], [i])
+
+        for i in range(n // 2):
+            circuit.append(ent_gate, [2 * i, 2 * i + 1])
+
+        for i in range(n):
+            circuit.append(gate_list[index[n + i]], [i])
+
+        for i in range((n - 1) // 2):
+            circuit.append(ent_gate, [2 * i + 1, 2 * i + 2])
 
     return circuit

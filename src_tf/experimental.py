@@ -446,16 +446,21 @@ class SphereStrings:
 
     def fidelity(self):
         self.generate()
-        psi_list = []
-        for i in range(self.N):
-            psi_list.append(kron(*self.strings[i, :, :, 0]))
-        psi = tf.expand_dims(tf.stack(psi_list, axis=0), axis=2)
-        rho1 = psi @ tf.linalg.adjoint(psi)
-        rho2 = tf.stack([kron(rho1[i], rho1[i]) for i in range(self.N)], axis=0)
+        self.strings
 
-        p1 = state_purity(tf.math.reduce_mean(rho1, axis=0))
-        p2 = state_purity(tf.math.reduce_mean(rho2, axis=0))
-        fid = (p1 + p2) / 2
+        A = tf.linalg.einsum(
+            "a...k,b...k -> ab...",
+            self.strings[:, :, :, 0],
+            tf.math.conj(self.strings[:, :, :, 0]),
+        )
+        A = tf.abs(tf.math.reduce_prod(A, axis=2)) ** 2
+
+        fid = tf.math.reduce_sum(A) / self.N**2
+
+        # fid = tf.linalg.set_diag(fid, tf.zeros_like(fid[:, 0]))
+        # fid = tf.math.reduce_max(fid, axis=1)
+        # fid = tf.math.reduce_sum(fid) / self.N
+
         return fid
 
     def generate_circuits(self, grid=False):
