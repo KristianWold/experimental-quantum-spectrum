@@ -35,13 +35,21 @@ def kron(*args):
     return A
 
 
-def tf_kron(A, num_axes=2):
-    length = len(args)
-    A = args[0]
-    for i in range(1, length):
-        A = tf.experimental.numpy.kron(A, args[i])
+def tf_kron(A, B):
+    batch = A.shape[0]
+    dim_a1 = A.shape[1]
+    dim_a2 = A.shape[2]
+    dim_b1 = B.shape[1]
+    dim_b2 = B.shape[2]
 
-    return A
+    A = tf.reshape(A, [batch, -1, 1])
+    B = tf.reshape(B, [batch, 1, -1])
+    AB = tf.matmul(A, B)
+    AB = tf.reshape(AB, [batch, dim_a1, dim_a2, dim_b1, dim_b2])
+    AB = tf.transpose(AB, [0, 1, 3, 2, 4])
+    AB = tf.reshape(AB, [batch, dim_a1 * dim_b1, dim_a2 * dim_b2])
+
+    return AB
 
 
 def index_generator(n, N=None, trace=True):
