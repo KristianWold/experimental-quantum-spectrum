@@ -122,7 +122,8 @@ class ModelQuantumMap:
 
             self.logger.log(self)
             self.counter += 1
-
+            
+        print(loss)
         self.channel.generate_channel()
         self.logger.log(self)
 
