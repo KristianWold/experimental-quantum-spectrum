@@ -123,8 +123,7 @@ class CorruptionMatrix:
 
     def generate_POVM(self):
         C = tf.abs(self.A)
-        C = C / np.sum(C, axis=1)
-        C = tf.transpose(C)
+        C = C / tf.reduce_sum(C, axis=0)
         self.povm = tf.cast(corr_mat_to_povm(C), dtype=precision)
         if self.k is not None:
             self.povm = self.c * self.povm_ideal + (1 - self.c) * self.povm

@@ -70,8 +70,12 @@ class KLDiv:
         state = apply_unitary(state, U_prep)
         state = channel.apply_channel(state)
 
+        mask = tf.math.real(target) > 1e-15
+
         output = measurement(state, U_basis, channel.spam.povm.povm)
-        loss = d * tf.math.reduce_mean(target * tf.math.log((target + 1e-32) / output))
+        loss = tf.math.reduce_sum(
+            target[mask] * tf.math.log(target[mask] / output[mask])
+        )
 
         return loss
 
@@ -139,7 +143,7 @@ class SpectrumDistance:
         if self.mode == "density":
             loss = self.overlap(spectrum_model, spectrum_model)
             loss += -2 * self.overlap(spectrum_model, spectrum_target)
-            #loss += self.overlap(spectrum_target, spectrum_target)
+            # loss += self.overlap(spectrum_target, spectrum_target)
 
         if self.mode == "pairwise":
             connections = greedy_pair_distance(spectrum_model, spectrum_target)
@@ -231,8 +235,8 @@ class AnnulusDistance:
         distance = (
             tf.math.abs(r_mean1 - r_mean2)
             + tf.math.abs(r_std1 - r_std2)
-           # + tf.math.abs(a_mean1 - a_mean2)
-        #    + tf.math.abs(a_std1 - a_std2)
+            # + tf.math.abs(a_mean1 - a_mean2)
+            #    + tf.math.abs(a_std1 - a_std2)
         )
 
         return distance
@@ -242,9 +246,9 @@ class AnnulusDistance:
         r_mean = tf.math.reduce_mean(radial)
         r_std = tf.math.reduce_std(radial)
 
-     #   angular = spectrum_to_angular(spectrum) / (2 * np.pi)
-     #   a_mean = tf.math.reduce_mean(angular)
-     #   a_std = tf.math.reduce_std(angular)
+        #   angular = spectrum_to_angular(spectrum) / (2 * np.pi)
+        #   a_mean = tf.math.reduce_mean(angular)
+        #   a_std = tf.math.reduce_std(angular)
 
         return r_mean, r_std, _, _
 
