@@ -54,58 +54,30 @@ class Hamiltonian(Liouvillian):
 
 class SpinSpin(Liouvillian):
     def __init__(self, degree=3):
+        self.degree = degree
         self.d = 4
         self.rank = 1
         self.I = tf.eye(2, dtype=precision)
-        self.u1 = tf.Variable(tf.random.normal([], 0, 1), trainable=True)
-        self.u2 = tf.Variable(tf.random.normal([], 0, 1), trainable=True)
-        self.u3 = tf.Variable(tf.random.normal([], 0, 1), trainable=True)
 
-        self.degree = degree
-        self.theta1_x = tf.Variable(
-            tf.random.normal([self.degree], 0, 1), trainable=True
+        self.u = tf.Variable(tf.random.normal([3], 0, 1), trainable=True)
+        self.theta_sin = tf.Variable(
+            tf.random.normal([6 * (self.degree - 1)], 0, 1), trainable=True
         )
-        self.theta1_y = tf.Variable(
-            tf.random.normal([self.degree], 0, 1), trainable=True
-        )
-        self.theta1_z = tf.Variable(
-            tf.random.normal([self.degree], 0, 1), trainable=True
-        )
-
-        self.theta2_x = tf.Variable(
-            tf.random.normal([self.degree], 0, 1), trainable=True
-        )
-        self.theta2_y = tf.Variable(
-            tf.random.normal([self.degree], 0, 1), trainable=True
-        )
-        self.theta2_z = tf.Variable(
-            tf.random.normal([self.degree], 0, 1), trainable=True
+        self.theta_cos = tf.Variable(
+            tf.random.normal([6 * self.degree], 0, 1), trainable=True
         )
 
         self.parameter_list = [
-            self.u1,
-            self.u2,
-            self.u3,
-            self.theta1_x,
-            self.theta1_y,
-            self.theta1_z,
-            self.theta2_x,
-            self.theta2_y,
-            self.theta2_z,
+            self.u,
+            self.theta_cos,
+            self.theta_sin,
         ]
 
     def __call__(self, t):
         t = tf.cast(t, precision)[:, tf.newaxis, tf.newaxis]
-        u1 = tf.cast(self.u1, precision)
-        u2 = tf.cast(self.u2, precision)
-        u3 = tf.cast(self.u3, precision)
-        theta1_x = tf.cast(self.theta1_x, precision)
-        theta1_y = tf.cast(self.theta1_y, precision)
-        theta1_z = tf.cast(self.theta1_z, precision)
-
-        theta2_x = tf.cast(self.theta2_x, precision)
-        theta2_y = tf.cast(self.theta2_y, precision)
-        theta2_z = tf.cast(self.theta2_z, precision)
+        u = tf.cast(self.u, precision)
+        theta_sin = tf.cast(self.theta_sin, precision)
+        theta_cos = tf.cast(self.theta_cos, precision)
 
         X = tf.convert_to_tensor([[0, 1], [1, 0]], dtype=precision)
         Y = tf.convert_to_tensor([[0, -1j], [1j, 0]], dtype=precision)
@@ -134,33 +106,55 @@ class SpinSpin(Liouvillian):
         H = 0.0
         for j in range(self.degree):
             H += (
-                theta1_x[j] * tf.math.cos(2 * np.pi * j * t) * XI
-                + theta1_y[j] * tf.math.cos(2 * np.pi * j * t) * YI
-                + theta1_z[j] * tf.math.cos(2 * np.pi * j * t) * ZI
+                theta_cos[j] * tf.math.cos(2 * np.pi * j * t) * XI
+                + theta_cos[self.degree + j] * tf.math.cos(2 * np.pi * j * t) * YI
+                + theta_cos[2 * self.degree + j] * tf.math.cos(2 * np.pi * j * t) * ZI
+                + theta_cos[3 * self.degree + j] * tf.math.cos(2 * np.pi * j * t) * IX
+                + theta_cos[4 * self.degree + j] * tf.math.cos(2 * np.pi * j * t) * IY
+                + theta_cos[5 * self.degree + j] * tf.math.cos(2 * np.pi * j * t) * IZ
             )
+        for j in range(self.degree - 1):
             H += (
-                theta2_x[j] * tf.math.cos(2 * np.pi * j * t) * IX
-                + theta2_y[j] * tf.math.cos(2 * np.pi * j * t) * IY
-                + theta2_z[j] * tf.math.cos(2 * np.pi * j * t) * IZ
+                theta_sin[j] * tf.math.sin(2 * np.pi * (j + 1) * t) * XI
+                + theta_sin[(self.degree - 1) + j]
+                * tf.math.sin(2 * np.pi * (j + 1) * t)
+                * YI
+                + theta_sin[2 * (self.degree - 1) + j]
+                * tf.math.sin(2 * np.pi * (j + 1) * t)
+                * ZI
+                + theta_sin[3 * (self.degree - 1) + j]
+                * tf.math.sin(2 * np.pi * (j + 1) * t)
+                * IX
+                + theta_sin[4 * (self.degree - 1) + j]
+                * tf.math.sin(2 * np.pi * (j + 1) * t)
+                * IY
+                + theta_sin[5 * (self.degree - 1) + j]
+                * tf.math.sin(2 * np.pi * (j + 1) * t)
+                * IZ
             )
-        H += u1 * XX + u2 * YY + u3 * ZZ
-
-        # HH = tf_kron(H, I) - tf_kron(I, tf.transpose(H, [0, 2, 1]))
-        # L = -1j * HH
+        H += u[0] * XX + u[1] * YY + u[2] * ZZ
 
         return H
 
 
 class JumpOperator:
-    def __init__(self, d):
+    def __init__(self, d, trainable):
         self.d = d
-        self.J = tf.complex(
-            tf.random.normal([d, d], 0, 1, dtype=tf.float64),
-            tf.random.normal([d, d], 0, 1, dtype=tf.float64),
-        )
+        self.A = tf.random.normal([d, d], 0, 1, dtype=tf.float64)
+        self.B = tf.random.normal([d, d], 0, 1, dtype=tf.float64)
+        self.parameter_list = []
+
+        if trainable:
+            self.A = tf.Variable(self.A, trainable=True)
+            self.B = tf.Variable(self.B, trainable=True)
+            self.parameter_list.extend([self.A, self.B])
 
     def __call__(self, t):
-        J = tf.repeat(self.J[None, :, :], len(t), axis=0)
+        J = tf.complex(self.A, self.B)
+        J = J - tf.linalg.trace(J) * tf.eye(self.d, dtype=precision) / self.d
+        norm = tf.linalg.trace(tf.matmul(J, J, adjoint_a=True))
+        J = J / tf.math.sqrt(norm)
+        J = tf.repeat(J[None, :, :], len(t), axis=0)
         return J
 
 
@@ -171,7 +165,7 @@ class LindbladGenerator:
         self.gamma = gamma
 
         self.d = hamiltonian.d
-        self.parameter_list = hamiltonian.parameter_list
+        self.parameter_list = hamiltonian.parameter_list + jump_operator.parameter_list
 
     def __call__(self, t):
         H = self.Hamiltonian(t)
