@@ -165,7 +165,9 @@ class LindbladGenerator:
         self.gamma = gamma
 
         self.d = hamiltonian.d
-        self.parameter_list = hamiltonian.parameter_list + jump_operator.parameter_list
+        self.parameter_list = hamiltonian.parameter_list
+        if jump_operator is not None:
+            self.parameter_list.extend(jump_operator.parameter_list)
 
     def __call__(self, t):
         H = self.Hamiltonian(t)
