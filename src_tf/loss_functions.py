@@ -63,7 +63,6 @@ class KLDiv:
 
     def __call__(self, channel, input, target):
         N = target.shape[0]
-        d = channel.spam.d
         U_prep, U_basis = input
 
         state = tf.repeat(tf.expand_dims(channel.spam.init.init, axis=0), N, axis=0)
@@ -227,7 +226,7 @@ class SpectrumDistance:
 class AnnulusDistance:
     def __call__(self, channel, input, target):
         spectrum_target = target[0]
-        spectrum_model = channel_spectrum(channel, use_coords=True)
+        spectrum_model = channel_spectrum(channel, use_coords=True, keep_real=False)
 
         r_mean1, r_std1, a_mean1, a_std1 = self.spectrum_to_momenta(spectrum_model)
         r_mean2, r_std2, a_mean2, a_std2 = self.spectrum_to_momenta(spectrum_target)
@@ -250,7 +249,7 @@ class AnnulusDistance:
         #   a_mean = tf.math.reduce_mean(angular)
         #   a_std = tf.math.reduce_std(angular)
 
-        return r_mean, r_std, _, _
+        return r_mean, r_std, None, None
 
 
 # Regularizers

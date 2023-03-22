@@ -60,5 +60,26 @@ def normalize_spectrum(spectrum, scale=1):
 
 
 def complex_spacing_ratio(spectrum):
-    distance = tf.matmul(spectrum, spectrum, adjoint_b=True)
+    d = len(spectrum)
+    z_list = []
+    for i in tqdm(range(d)):
+        idx_NN = i
+        dist_NN = float("inf")
 
+        idx_NNN = i
+        dist_NNN = float("inf")
+
+        for j in range(d):
+            if j != i:
+                dist = tf.abs(spectrum[i] - spectrum[j])
+                if dist < dist_NN:
+                    dist_NNN = dist_NN
+                    idx_NNN = idx_NN
+
+                    dist_NN = dist
+                    idx_NN = j
+
+        z = (spectrum[i] - spectrum[idx_NN]) / (spectrum[i] - spectrum[idx_NNN])
+        z_list.append(z)
+
+    return z_list
