@@ -65,7 +65,7 @@ def pqc_more_expressive(n, L):
     return circuit
 
 
-def integrabel_circuit(n, L, use_hadamard=False):
+def integrable_circuit(n, L, use_hadamard=False):
     # theta_list = [np.random.uniform(-np.pi, np.pi, 3 * n) for i in range(L)]
     theta_list = [np.random.uniform(-np.pi, np.pi, 2 * n) for i in range(L)]
     sqrt_iSWAP = iSwapGate().power(1 / 2)
@@ -96,7 +96,7 @@ def integrabel_circuit(n, L, use_hadamard=False):
     return circuit
 
 
-def nonintegrabel_circuit(n, L, use_hadamard=False, use_sqrtSwap=True):
+def nonintegrable_circuit(n, L, use_hadamard=False, use_sqrtSwap=True):
     # index_list = [np.random.randint(0, 8, 3 * n) for i in range(L)]
     index_list = [np.random.randint(0, 8, 2 * n) for i in range(L)]
     gate_list = [

@@ -137,9 +137,35 @@ class SpinSpin(Liouvillian):
         return H
 
 
-class JumpOperator:
-    def __init__(self, d, trainable):
+class PolynomialHamiltonian:
+    def __init__(self, d=None, degree=None):
         self.d = d
+        self.degree = degree
+
+        self.A = tf.Variable(
+            tf.random.normal([degree, d, d], 0, 1, dtype=tf.float64), trainable=True
+        )
+        self.B = tf.Variable(
+            tf.random.normal([degree, d, d], 0, 1, dtype=tf.float64), trainable=True
+        )
+
+        self.parameter_list = [self.A, self.B]
+
+    def __call__(self, t):
+        t = tf.cast(t, precision)[:, tf.newaxis, tf.newaxis]
+        G = tf.complex(self.A, self.B)
+        H = G + tf.linalg.adjoint(G)
+        H_ = 0
+        for i in range(self.degree):
+            H_ += H[tf.newaxis, i, :, :] * t**i
+
+        return H_
+
+
+class JumpOperator:
+    def __init__(self, d, trainable=False, trace_less=True):
+        self.d = d
+        self.trace_less = trace_less
         self.A = tf.random.normal([d, d], 0, 1, dtype=tf.float64)
         self.B = tf.random.normal([d, d], 0, 1, dtype=tf.float64)
         self.parameter_list = []
@@ -151,7 +177,8 @@ class JumpOperator:
 
     def __call__(self, t):
         J = tf.complex(self.A, self.B)
-        J = J - tf.linalg.trace(J) * tf.eye(self.d, dtype=precision) / self.d
+        if self.trace_less:
+            J = J - tf.linalg.trace(J) * tf.eye(self.d, dtype=precision) / self.d
         norm = tf.linalg.trace(tf.matmul(J, J, adjoint_a=True))
         J = J / tf.math.sqrt(norm)
         J = tf.repeat(J[None, :, :], len(t), axis=0)

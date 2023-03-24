@@ -233,6 +233,7 @@ class TwoLocalKrausMap(KrausMap):
 
         self.d = d
         self.n = int(np.log2(d))
+        self.I = tf.eye(2, dtype=precision)
         self.kraus_list = [KrausMap(4, 16) for i in range(self.n - 1)]
         self.parameter_list = []
         for kraus in self.kraus_list:
