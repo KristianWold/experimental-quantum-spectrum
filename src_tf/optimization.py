@@ -20,10 +20,16 @@ from set_precision import *
 
 class Logger:
     def __init__(
-        self, sample_freq=100, loss_function=None, loss_function_val=None, verbose=True
+        self,
+        sample_freq=100,
+        loss_function=None,
+        loss_function_val=None,
+        N=500,
+        verbose=True,
     ):
         self.sample_freq = sample_freq
         self.loss_function = loss_function
+        self.N = N
 
         if loss_function_val is None:
             loss_function_val = loss_function
@@ -36,9 +42,15 @@ class Logger:
 
     def log(self, other, push=False):
         if other.counter % self.sample_freq == 0 or push:
+            if self.N != 0:
+                indices = list(range(other.targets.shape[0]))
+                batch = tf.random.shuffle(indices)[: self.N]
+                inputs_batch = [tf.gather(data, batch, axis=0) for data in other.inputs]
+                targets_batch = tf.gather(other.targets, batch, axis=0)
+
             loss_train = None
             loss_train = np.real(
-                self.loss_function(other.channel, other.inputs, other.targets).numpy()
+                self.loss_function(other.channel, inputs_batch, targets_batch).numpy()
             )
             self.loss_train_list.append(loss_train)
 
@@ -122,7 +134,7 @@ class ModelQuantumMap:
 
             self.logger.log(self)
             self.counter += 1
-            
+
         print(loss)
         self.channel.generate_channel()
         self.logger.log(self)
