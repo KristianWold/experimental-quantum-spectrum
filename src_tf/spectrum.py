@@ -59,11 +59,16 @@ def normalize_spectrum(spectrum, scale=1):
     return spectrum
 
 
-def complex_spacing_ratio(spectrum):
+def complex_spacing_ratio(spectrum, verbose = False):
     d = len(spectrum)
     spectrum = np.array(spectrum)[:,0]
     z_list = []
-    for i in tqdm(range(d)):
+    if verbose:
+        decorator = tqdm
+    else:
+        decorator = lambda x: x
+
+    for i in decorator(range(d)):
         idx_NN = i
         dist_NN = float("inf")
 
@@ -83,8 +88,8 @@ def complex_spacing_ratio(spectrum):
                 if (dist > dist_NN) and (dist < dist_NNN):
                     dist_NNN = dist
                     idx_NNN = j
-
-        z = (spectrum[idx_NN] -spectrum[i]) / (spectrum[idx_NNN] - spectrum[i])
+        
+            z = (spectrum[idx_NN] -spectrum[i]) / (spectrum[idx_NNN] - spectrum[i])
         z_list.append(z)
 
     return np.array(z_list)
@@ -116,3 +121,65 @@ def spacing_ratio(spectrum):
 
         z = np.angle(spectrum[i] - spectrum[idx_NN]) / np.angle(spectrum[i] - spectrum[idx_NNN])
         z_list.append(z)
+
+def distance_spacing_ratio(spectrum, verbose = False):
+    d = len(spectrum)
+    spectrum = np.array(spectrum)[:,0]
+    z_list = []
+    if verbose:
+        decorator = tqdm
+    else:
+        decorator = lambda x: x
+
+    s = mean_spacing(spectrum)
+    rho = unfolding(spectrum, 4.5*s)
+
+    for i in decorator(range(d)):
+        
+        dist_NN = float("inf")
+        dist_NNN = float("inf")
+
+        for j in range(d):
+            if j != i:
+                dist = np.abs(spectrum[i] - spectrum[j])
+                if dist < dist_NN:
+                    dist_NNN = dist_NN
+
+                    dist_NN = dist
+                    
+                if (dist > dist_NN) and (dist < dist_NNN):
+                    dist_NNN = dist
+
+        z = dist_NNN/ dist_NN
+        z = z * np.sqrt(rho[i])
+        z_list.append(z)
+
+    return np.array(z_list)
+
+def unfolding(spectrum, sigma):
+    N = spectrum.shape[0]
+    spectrum = np.array(spectrum)
+    diff = np.abs(spectrum.reshape(-1,1) - spectrum.reshape(1,-1))
+    expo = -1/(2*sigma**2)*diff**2
+    rho = 1/(2*np.pi*sigma**2*N)*np.sum(np.exp(expo), axis=1)
+    return rho
+
+def mean_spacing(spectrum):
+    d = len(spectrum)
+    ms_list = []
+    for i in range(d):
+        idx_NN = i
+        dist_NN = float("inf")
+
+        for j in range(d):
+            if j != i:
+                dist = np.abs(spectrum[i] - spectrum[j])
+                if dist < dist_NN:
+                    dist_NN = dist
+
+        ms_list.append(dist_NN)
+
+    return np.mean(ms_list)
+        
+
+
