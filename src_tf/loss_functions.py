@@ -101,7 +101,6 @@ class RankMSE:
         self.weight = weight
 
     def __call__(self, channel, input, target):
-
         rank_target = target
         loss = self.weight * (effective_rank(channel) - rank_target) ** 2
 
@@ -204,7 +203,6 @@ class SpectrumDistance:
             for j, b in enumerate(spectrum_b):
                 dist = tf.abs((a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2)
                 if (dist < min_dist) and not_connected[j]:
-
                     min_dist = dist
                     idx = j
 
