@@ -88,6 +88,16 @@ class CNOT(Gate):
         U = pad_unitary(U, self.n, self.target_qubits)
         return U
 
+    def __call__(self, state):
+        U = tf.convert_to_tensor(
+            [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]],
+            dtype=tf.complex128,
+        )
+
+        state = tf.tensordot(U, state, axes=[[2, 3], self.target_qubits])
+        state = tf.moveaxis(state, [0, 1], self.target_qubits)
+        return state @ U
+
 
 class Ry(Gate):
     def __init__(self, theta, n, target_qubits):
