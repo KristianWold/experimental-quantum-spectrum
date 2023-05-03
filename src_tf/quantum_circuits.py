@@ -96,6 +96,44 @@ def integrable_circuit(n, L, use_hadamard=False):
     return circuit
 
 
+def integrable_circuit_alt(n, L, use_hadamard=False):
+    # theta_list = [np.random.uniform(-np.pi, np.pi, 3 * n) for i in range(L)]
+    theta_list = [np.random.uniform(-np.pi, np.pi, 3 * n) for i in range(L)]
+    sqrt_iSWAP = iSwapGate().power(1 / 2)
+
+    circuit = qk.QuantumCircuit(n)
+    if use_hadamard:
+        for i in range(n):
+            circuit.h(i)
+            
+    for theta in theta_list:
+        for i in range(n):
+            circuit.rz(theta[i], i)
+
+        for i in range(n // 2):
+            circuit.append(sqrt_iSWAP, [2 * i, 2 * i + 1])
+
+        for i in range(n):
+            circuit.rz(theta[n + i], i)
+
+        for i in range((n - 1) // 2):
+            circuit.append(sqrt_iSWAP, [2 * i + 1, 2 * i + 2])
+
+        for i in range(n):
+            circuit.rz(theta[2*n + i], i)
+
+        for i in range(n // 2):
+            circuit.append(sqrt_iSWAP, [2 * i, 2 * i + 1])
+
+        # for i in range(n):
+        #    circuit.rz(theta[2 * n + i], i)
+
+        # for i in range(n // 2):
+        #    circuit.append(sqrt_iSWAP, [2 * i, 2 * i + 1])
+
+    return circuit
+
+
 def nonintegrable_circuit(n, L, use_hadamard=False, use_sqrtSwap=True):
     # index_list = [np.random.randint(0, 8, 3 * n) for i in range(L)]
     index_list = [np.random.randint(0, 8, 2 * n) for i in range(L)]

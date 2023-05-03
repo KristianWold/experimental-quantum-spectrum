@@ -59,9 +59,12 @@ def normalize_spectrum(spectrum, scale=1):
     return spectrum
 
 
-def complex_spacing_ratio(spectrum, verbose = False):
+def complex_spacing_ratio(spectrum, verbose = False, log = True):
     d = len(spectrum)
     spectrum = np.array(spectrum)[:,0]
+    if log:
+        spectrum = np.log(spectrum)
+
     z_list = []
     if verbose:
         decorator = tqdm
@@ -89,7 +92,7 @@ def complex_spacing_ratio(spectrum, verbose = False):
                     dist_NNN = dist
                     idx_NNN = j
         
-            z = (spectrum[idx_NN] -spectrum[i]) / (spectrum[idx_NNN] - spectrum[i])
+            z = (spectrum[idx_NN] - spectrum[i]) / (spectrum[idx_NNN] - spectrum[i])
         z_list.append(z)
 
     return np.array(z_list)
@@ -122,6 +125,7 @@ def spacing_ratio(spectrum):
         z = np.angle(spectrum[i] - spectrum[idx_NN]) / np.angle(spectrum[i] - spectrum[idx_NNN])
         z_list.append(z)
 
+
 def distance_spacing_ratio(spectrum, verbose = False):
     d = len(spectrum)
     spectrum = np.array(spectrum)[:,0]
@@ -130,9 +134,9 @@ def distance_spacing_ratio(spectrum, verbose = False):
         decorator = tqdm
     else:
         decorator = lambda x: x
-
-    s = mean_spacing(spectrum)
-    rho = unfolding(spectrum, 4.5*s)
+    log_spectrum = np.log(spectrum)
+    s = mean_spacing(log_spectrum)
+    rho = unfolding(log_spectrum, 4.5*s)
 
     for i in decorator(range(d)):
         
@@ -141,7 +145,7 @@ def distance_spacing_ratio(spectrum, verbose = False):
 
         for j in range(d):
             if j != i:
-                dist = np.abs(spectrum[i] - spectrum[j])
+                dist = np.abs(log_spectrum[i] - log_spectrum[j])
                 if dist < dist_NN:
                     dist_NNN = dist_NN
 
@@ -156,6 +160,7 @@ def distance_spacing_ratio(spectrum, verbose = False):
 
     return np.array(z_list)
 
+
 def unfolding(spectrum, sigma):
     N = spectrum.shape[0]
     spectrum = np.array(spectrum)
@@ -163,6 +168,7 @@ def unfolding(spectrum, sigma):
     expo = -1/(2*sigma**2)*diff**2
     rho = 1/(2*np.pi*sigma**2*N)*np.sum(np.exp(expo), axis=1)
     return rho
+
 
 def mean_spacing(spectrum):
     d = len(spectrum)
