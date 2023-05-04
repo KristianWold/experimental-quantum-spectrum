@@ -42,7 +42,6 @@ def partial_transpose(state, qubit):
 
 
 def state_fidelity(A, B):
-
     sqrtB = tf.linalg.sqrtm(B)
     C = sqrtB @ A @ sqrtB
 
