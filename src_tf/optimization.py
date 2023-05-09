@@ -47,6 +47,9 @@ class Logger:
                 batch = tf.random.shuffle(indices)[: self.N]
                 inputs_batch = [tf.gather(data, batch, axis=0) for data in other.inputs]
                 targets_batch = tf.gather(other.targets, batch, axis=0)
+            else:
+                inputs_batch = other.inputs
+                targets_batch = other.targets
 
             loss_train = None
             loss_train = np.real(
@@ -80,7 +83,7 @@ class ModelQuantumMap:
         self.optimizer = optimizer
 
         if logger is None:
-            logger = Logger(loss_function=loss_function, verbose=False)
+            logger = Logger(loss_function=loss_function, verbose=False, N=0)
         self.logger = logger
 
         if not isinstance(self.loss_function, list):
@@ -98,7 +101,6 @@ class ModelQuantumMap:
         N=0,
         verbose=True,
     ):
-
         self.inputs = inputs
         self.targets = targets
         self.inputs_val = inputs_val

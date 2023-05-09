@@ -1,0 +1,6 @@
+\begin{quantikz}[row sep={0.8cm,between origins}]
+                          & \gate{H} & \gate{R_x(x_1)}  &  \gate{R_x} & \gate{R_y}  &  \ctrl{1}    & \qw      & \qw      & \gate{R_x(x_1)}  &  \gate{R_x} & \gate{R_y}  &  \ctrl{1}    & \qw      & \qw       \\
+                          & \gate{H} & \gate{R_x(x_2)}  &  \gate{R_x} & \gate{R_y}  &  \targ{}     & \ctrl{1} & \qw      & \gate{R_x(x_2)}  &  \gate{R_x} & \gate{R_y}  &  \targ{}     & \ctrl{1} & \qw     \\
+                          & \gate{H} & \gate{R_x(x_3)}  &  \gate{R_x} & \gate{R_y}  &  \qw         & \targ{}  & \ctrl{1} & \gate{R_x(x_3)}  &  \gate{R_x} & \gate{R_y}  &  \qw         & \targ{}  & \ctrl{1} \\
+                          & \gate{H} & \gate{R_x(x_4)}  &  \gate{R_x} & \gate{R_y}  &  \qw         & \qw      & \targ{}  & \gate{R_x(x_4)}  &  \gate{R_x} & \gate{R_y}  &  \qw         & \qw      & \targ{}                                                                     
+\end{quantikz}
