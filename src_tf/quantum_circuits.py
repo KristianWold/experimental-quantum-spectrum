@@ -8,7 +8,7 @@ from qiskit.quantum_info import DensityMatrix
 from qiskit.quantum_info import Operator
 from scipy.linalg import sqrtm
 from tqdm.notebook import tqdm
-from qiskit.circuit.library import iSwapGate, XGate, YGate, HGate, CXGate
+from qiskit.circuit.library import iSwapGate, XGate, YGate, HGate, CXGate, RGate
 
 
 def pqc_basic(n, L):
@@ -138,14 +138,14 @@ def nonintegrable_circuit(n, L, use_hadamard=False, use_sqrtSwap=True):
     # index_list = [np.random.randint(0, 8, 3 * n) for i in range(L)]
     index_list = [np.random.randint(0, 8, 2 * n) for i in range(L)]
     gate_list = [
-        XGate().power(1 / 2),
-        XGate().power(-1 / 2),
-        YGate().power(1 / 2),
-        YGate().power(-1 / 2),
-        XGate().power(1 / 4),
-        XGate().power(-1 / 4),
-        YGate().power(1 / 4),
-        YGate().power(-1 / 4),
+        XGate().power(1/2),
+        XGate().power(-1/2),
+        YGate().power(1/2),
+        YGate().power(-1/2),
+        RGate(np.pi/2, np.pi/4),
+        RGate(-np.pi/2, np.pi/4),
+        RGate(np.pi/2, -np.pi/4),
+        RGate(-np.pi/2, -np.pi/4),
     ]
     if use_sqrtSwap:
         ent_gate = iSwapGate().power(1 / 2)
