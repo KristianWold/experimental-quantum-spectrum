@@ -12,6 +12,7 @@ from quantum_channel import *
 from utils import *
 from set_precision import *
 
+
 # @profile
 def prepare_input(config, return_mode="density"):
     """0 = |0>, 1 = |1>, 2 = |+>, 3 = |->, 4 = |i+>, 5 = |i+>"""
@@ -47,7 +48,6 @@ def prepare_input(config, return_mode="density"):
 
 
 def pauli_observable(config, return_mode="density"):
-
     n = len(config)
     X = np.array([[0, 1], [1, 0]])
     Y = np.array([[0, -1j], [1j, 0]])
@@ -95,7 +95,6 @@ def generate_pauli_circuits(n=None, circuit_target=None, N=None, trace=False):
     input_list = [[], []]
     circuit_list = []
     for i, j in zip(state_index, observ_index):
-
         config1 = numberToBase(i, 6, n)
         U_prep = prepare_input(config1, return_mode="unitary")
 
@@ -128,7 +127,6 @@ def generate_pauliInput_circuits(n=None):
     input_list = []
     circuit_list = []
     for i in range(6**n):
-
         config = numberToBase(i, 6, n)
         U_prep = prepare_input(config, return_mode="unitary")
         circuit = prepare_input(config, return_mode="circuit_measure")
@@ -517,7 +515,12 @@ class ExecuteAndCollect:
             self.initial_layout = initial_layout
 
     def execute_circuits(
-        self, backend, shots_map, shots_spam, filename=None, concatenate=False
+        self,
+        backend,
+        shots_map,
+        shots_spam,
+        filename=None,
+        concatenate=False,
     ):
         self.result_list = []
         self.shots_map = shots_map

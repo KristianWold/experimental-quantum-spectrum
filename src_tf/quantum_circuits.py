@@ -105,7 +105,7 @@ def integrable_circuit_alt(n, L, use_hadamard=False):
     if use_hadamard:
         for i in range(n):
             circuit.h(i)
-            
+
     for theta in theta_list:
         for i in range(n):
             circuit.rz(theta[i], i)
@@ -120,7 +120,7 @@ def integrable_circuit_alt(n, L, use_hadamard=False):
             circuit.append(sqrt_iSWAP, [2 * i + 1, 2 * i + 2])
 
         for i in range(n):
-            circuit.rz(theta[2*n + i], i)
+            circuit.rz(theta[2 * n + i], i)
 
         for i in range(n // 2):
             circuit.append(sqrt_iSWAP, [2 * i, 2 * i + 1])
@@ -138,14 +138,14 @@ def nonintegrable_circuit(n, L, use_hadamard=False, use_sqrtSwap=True):
     # index_list = [np.random.randint(0, 8, 3 * n) for i in range(L)]
     index_list = [np.random.randint(0, 8, 2 * n) for i in range(L)]
     gate_list = [
-        XGate().power(1/2),
-        XGate().power(-1/2),
-        YGate().power(1/2),
-        YGate().power(-1/2),
-        RGate(np.pi/2, np.pi/4),
-        RGate(-np.pi/2, np.pi/4),
-        RGate(np.pi/2, -np.pi/4),
-        RGate(-np.pi/2, -np.pi/4),
+        XGate().power(1 / 2),
+        XGate().power(-1 / 2),
+        YGate().power(1 / 2),
+        YGate().power(-1 / 2),
+        RGate(np.pi / 2, np.pi / 4),
+        RGate(-np.pi / 2, np.pi / 4),
+        RGate(np.pi / 2, -np.pi / 4),
+        RGate(-np.pi / 2, -np.pi / 4),
     ]
     if use_sqrtSwap:
         ent_gate = iSwapGate().power(1 / 2)
