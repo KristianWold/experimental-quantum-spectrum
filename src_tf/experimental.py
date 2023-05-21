@@ -583,4 +583,9 @@ class ExecuteAndCollect:
                     [result.get_counts(circuit) for circuit in circuit_parcel]
                 )
 
+            probs = counts_to_probs(counts_list)
+
+            with open("../../data/" + filename + str(i) + "_backup", "wb") as handle:
+                pickle.dump(probs, handle)
+
         return counts_list
