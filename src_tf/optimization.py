@@ -196,7 +196,7 @@ def fit_model(
         targets=targets_spam,
         num_iter=num_iter_spam,
         N=N_spam,
-        verbose=False,
+        verbose=verbose,
     )
 
     channel.spam = spam
@@ -204,12 +204,18 @@ def fit_model(
         channel=channel,
         loss_function=loss_function,
         optimizer=tf.optimizers.Adam(learning_rate=0.01),
-        logger=Logger(loss_function=loss_function, verbose=False),
+        logger=Logger(
+            loss_function=ProbabilityMSE(),
+            loss_function_val=ProbabilityRValue(),
+            verbose=verbose,
+        ),
     )
 
     model.train(
         inputs=inputs_map,
         targets=targets_map,
+        inputs_val=inputs_map,
+        targets_val=targets_map,
         num_iter=num_iter_map,
         N=N_map,
         verbose=verbose,

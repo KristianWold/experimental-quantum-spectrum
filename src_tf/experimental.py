@@ -531,13 +531,19 @@ class ExecuteAndCollect:
         for i, data in enumerate(self.data_list):
             inputs_map, circuit_list_map, inputs_spam, circuit_list_spam = data
             if concatenate:
-                circuit_list = circuit_list_map + circuit_list_spam
-                counts_list = self.runner(circuit_list, backend, shots=shots_map)
-                counts_map = counts_list[: len(circuit_list_map)]
-                counts_spam = counts_list[len(circuit_list_map) :]
+                circuit_list = circuit_list_spam + circuit_list_map
+                counts_list = self.runner(
+                    circuit_list, backend, shots=shots_map, filename=filename
+                )
+                counts_spam = counts_list[: len(circuit_list_spam)]
+                counts_map = counts_list[len(circuit_list_spam) :]
             else:
-                counts_map = self.runner(circuit_list_map, backend, shots=shots_map)
-                counts_spam = self.runner(circuit_list_spam, backend, shots=shots_spam)
+                counts_map = self.runner(
+                    circuit_list_map, backend, shots=shots_map, filename=filename
+                )
+                counts_spam = self.runner(
+                    circuit_list_spam, backend, shots=shots_spam, filename=filename
+                )
 
             probs_map = counts_to_probs(counts_map)
             probs_spam = counts_to_probs(counts_spam)
@@ -546,7 +552,7 @@ class ExecuteAndCollect:
             with open("../../data/" + filename + str(i), "wb") as handle:
                 pickle.dump(self.result_list[-1], handle)
 
-    def runner(self, circuit_list, backend, shots, scheduling_method="asap"):
+    def runner(self, circuit_list, backend, shots, filename, scheduling_method="asap"):
         N = len(circuit_list)
         num_batches = (N + 500 - 1) // 500
         circuit_batch_list = [
@@ -583,7 +589,7 @@ class ExecuteAndCollect:
                     [result.get_counts(circuit) for circuit in circuit_parcel]
                 )
 
-            probs = counts_to_probs(counts_list)
+            probs = counts_to_probs(counts_list[-500:])
 
             with open("../../data/" + filename + str(i) + "_backup", "wb") as handle:
                 pickle.dump(probs, handle)

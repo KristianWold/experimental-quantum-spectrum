@@ -58,6 +58,31 @@ class ProbabilityMSE:
         return loss
 
 
+class ProbabilityRValue:
+    """MSE loss over measured computational basis probabilities"""
+
+    def __call__(self, channel, input, target):
+        N = target.shape[0]
+        d = channel.spam.d
+
+        if isinstance(input, list):
+            U_prep, U_basis = input
+        else:
+            U_prep = input
+            U_basis = None
+
+        state = tf.repeat(tf.expand_dims(channel.spam.init.init, axis=0), N, axis=0)
+        state = apply_unitary(state, U_prep)
+        state = channel.apply_channel(state)
+        output = measurement(state, U_basis, channel.spam.povm.povm)
+        loss = 1 - (
+            tf.math.reduce_mean(tf.abs(output - target) ** 2)
+            / tf.math.reduce_std(target) ** 2
+        )
+
+        return loss
+
+
 class KLDiv:
     """KL-Divergence over measured computational basis probabilities"""
 
