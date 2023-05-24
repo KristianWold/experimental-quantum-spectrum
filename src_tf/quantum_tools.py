@@ -205,7 +205,7 @@ def add_shot_noise(probs, shots):
 
 
 def spectrum_to_radial(spectrum):
-    radial = tf.norm(spectrum, axis=1)
+    radial = tf.norm(spectrum, axis=1, ord=2)
     return radial
 
 

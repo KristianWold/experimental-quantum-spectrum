@@ -249,7 +249,7 @@ class SpectrumDistance:
 class AnnulusDistance:
     def __call__(self, channel, input, target):
         spectrum_target = target[0]
-        spectrum_model = channel_spectrum(channel, use_coords=True, keep_unity=False)
+        spectrum_model = channel_spectrum(channel, keep_unity=False)
 
         r_mean1, r_std1, a_mean1, a_std1 = self.spectrum_to_momenta(spectrum_model)
         r_mean2, r_std2, a_mean2, a_std2 = self.spectrum_to_momenta(spectrum_target)
