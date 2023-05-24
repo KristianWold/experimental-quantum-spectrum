@@ -60,9 +60,11 @@ class SpinSpin(Liouvillian):
         self.I = tf.eye(2, dtype=precision)
 
         self.u = tf.Variable(tf.random.normal([3], 0, 1), trainable=True)
-        self.theta_sin = tf.Variable(
-            tf.random.normal([6 * (self.degree - 1)], 0, 1), trainable=True
-        )
+        self.theta_sin = None
+        if degree > 1:
+            self.theta_sin = tf.Variable(
+                tf.random.normal([6 * (self.degree - 1)], 0, 1), trainable=True
+            )
         self.theta_cos = tf.Variable(
             tf.random.normal([6 * self.degree], 0, 1), trainable=True
         )
@@ -70,13 +72,15 @@ class SpinSpin(Liouvillian):
         self.parameter_list = [
             self.u,
             self.theta_cos,
-            self.theta_sin,
         ]
+        if self.theta_sin is not None:
+            self.parameter_list.append(self.theta_sin)
 
     def __call__(self, t):
         t = tf.cast(t, precision)[:, tf.newaxis, tf.newaxis]
         u = tf.cast(self.u, precision)
-        theta_sin = tf.cast(self.theta_sin, precision)
+        if self.theta_sin is not None:
+            theta_sin = tf.cast(self.theta_sin, precision)
         theta_cos = tf.cast(self.theta_cos, precision)
 
         X = tf.convert_to_tensor([[0, 1], [1, 0]], dtype=precision)
