@@ -22,3 +22,5 @@ This formualtion gives very generic control over the each qubit as sufficiently 
 We want to find appropriate parameters for the Spin-Spin Hamiltonian such that interesting Quantum Gates, that is, unitary dynamics, is realized. The Hamiltonian relates to the resulting unitary in the following way:
 
 $U(t) = \mathcal{T}e^{-i \int_0^t H(t)dt'}$.
+
+

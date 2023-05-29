@@ -139,6 +139,22 @@ class SpinSpin(Liouvillian):
         H += u[0] * XX + u[1] * YY + u[2] * ZZ
 
         return H
+    
+    def generate_Fourier_series(self):
+        if self.theta_sin is not None:
+            theta_sin = self.theta_sin.numpy().reshape(6, -1)
+        theta_cos = self.theta_cos.numpy().reshape(6, -1)
+        
+        signal_list = [0,0,0,0,0,0]
+        t = np.linspace(0, 1, 1000)
+        for idx in range(6):
+            for i, theta in enumerate(zip(theta_sin[idx])):
+                signal_list[idx] += theta*np.sin(2*np.pi*(i+1)*t)
+
+            for i, theta in enumerate(zip(theta_cos[idx])):
+                signal_list[idx] += theta*np.cos(2*np.pi*i*t)
+
+        return t, signal_list
 
 
 class PolynomialHamiltonian:
