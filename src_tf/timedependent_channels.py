@@ -14,6 +14,7 @@ from quantum_channel import *
 from spam import *
 from utils import *
 from set_precision import *
+from optimization import *
 
 
 class Liouvillian:
@@ -61,12 +62,12 @@ class SpinSpin(Liouvillian):
 
         self.u = tf.Variable(tf.random.normal([3], 0, 1), trainable=True)
         self.theta_sin = None
-        if degree > 1:
+        if degree > 0:
             self.theta_sin = tf.Variable(
-                tf.random.normal([6 * (self.degree - 1)], 0, 1), trainable=True
+                tf.random.normal([6 * self.degree], 0, 1), trainable=True
             )
         self.theta_cos = tf.Variable(
-            tf.random.normal([6 * self.degree], 0, 1), trainable=True
+            tf.random.normal([6 * (self.degree+1)], 0, 1), trainable=True
         )
 
         self.parameter_list = [
@@ -108,7 +109,7 @@ class SpinSpin(Liouvillian):
         IZ = tf.repeat(IZ[None, :, :], len(t), axis=0)
 
         H = 0.0
-        for j in range(self.degree):
+        for j in range(self.degree+1):
             H += (
                 theta_cos[j] * tf.math.cos(2 * np.pi * j * t) * XI
                 + theta_cos[self.degree + j] * tf.math.cos(2 * np.pi * j * t) * YI
@@ -117,7 +118,7 @@ class SpinSpin(Liouvillian):
                 + theta_cos[4 * self.degree + j] * tf.math.cos(2 * np.pi * j * t) * IY
                 + theta_cos[5 * self.degree + j] * tf.math.cos(2 * np.pi * j * t) * IZ
             )
-        for j in range(self.degree - 1):
+        for j in range(self.degree):
             H += (
                 theta_sin[j] * tf.math.sin(2 * np.pi * (j + 1) * t) * XI
                 + theta_sin[(self.degree - 1) + j]
@@ -143,6 +144,9 @@ class SpinSpin(Liouvillian):
     def generate_Fourier_series(self):
         if self.theta_sin is not None:
             theta_sin = self.theta_sin.numpy().reshape(6, -1)
+        else:
+            theta_sin = np.zeros((6, self.degree))
+            
         theta_cos = self.theta_cos.numpy().reshape(6, -1)
         
         signal_list = [0,0,0,0,0,0]
@@ -242,9 +246,11 @@ class MagnusPropagator(Channel):
         trainable=True,
         generate=True,
         grid_size=100,
+        T = 1,
     ):
         self.liouvillian = liouvillian
         self.grid_size = grid_size
+        self.T = T
 
         self.d = liouvillian.d
         self.parameter_list = liouvillian.parameter_list
@@ -281,6 +287,43 @@ class MagnusPropagator(Channel):
             T = tf.linalg.matmul(T, eL[i])
 
         return T
+    
+    @property
+    def choi(self):
+        return reshuffle(self.super_operator(self.T))
+    
+    def get_choi(self, T):
+        return reshuffle(self.super_operator(T))
+    
 
-    def choi(self, t):
-        return reshuffle(self.super_operator(t))
+def fit_spinspin(channel_target=None,
+                 degree = 0,
+                 gamma = 0,
+                 filename = None,
+                 grid_size = 200,
+                 num_iter = 500):
+
+    jump_operator = JumpOperator(4, trainable=False)
+    H_model = SpinSpin(degree=degree)
+
+    lindblad_model = LindbladGenerator(hamiltonian = H_model, 
+                                       jump_operator = jump_operator,
+                                       gamma = gamma,
+                                       )
+
+    channel_model = MagnusPropagator(liouvillian=lindblad_model, grid_size=grid_size, T = 1)
+
+    model = ModelQuantumMap(channel = channel_model,
+                            loss_function = channel_mse_loss,
+                            optimizer = tf.optimizers.Adam(learning_rate=0.01),
+                            logger = Logger(loss_function = channel_fidelity_loss, sample_freq=1, N=0),
+                            )
+    
+    model.train(inputs=None,
+            targets=[channel_target],
+            num_iter=num_iter,
+            N=0,
+            verbose=False,)
+    model.optimizer = None
+
+    saver(model, filename + ".model")

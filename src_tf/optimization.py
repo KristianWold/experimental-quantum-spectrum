@@ -100,11 +100,12 @@ class ModelQuantumMap:
         num_iter=1000,
         N=0,
         verbose=True,
-    ):
+    ):  
         self.inputs = inputs
         self.targets = targets
         self.inputs_val = inputs_val
         self.targets_val = targets_val
+        self.logger.verbose = verbose
         self.counter = 0
 
         if N != 0:
