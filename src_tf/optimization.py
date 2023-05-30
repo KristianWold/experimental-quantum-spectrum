@@ -172,12 +172,10 @@ def fit_model(
 ):
     if not counts:
         inputs_map, targets_map, inputs_spam, targets_spam = pickle.load(
-            open(f"../../data/{filename}", "rb")
+            open(filename, "rb")
         )
     else:
-        inputs_map, inputs_spam, counts = pickle.load(
-            open(f"../../data/{filename}", "rb")
-        )
+        inputs_map, inputs_spam, counts = pickle.load(open(filename, "rb"))
         targets = counts_to_probs(counts)
         N = inputs_map[0].shape[0]
         targets_map = targets[:N]
