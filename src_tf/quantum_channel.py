@@ -80,7 +80,7 @@ def channel_fidelity(channel_A, channel_B):
     choi_A = channel_A.choi
     choi_B = channel_B.choi
     d_squared = choi_A.shape[0]
-    fidelity = state_fidelity(choi_A, choi_B) / d_squared
+    fidelity = state_fidelity(choi_B, choi_A) / d_squared
 
     return fidelity
 
