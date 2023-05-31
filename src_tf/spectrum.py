@@ -59,9 +59,9 @@ def normalize_spectrum(spectrum, scale=1):
     return spectrum
 
 
-def complex_spacing_ratio(spectrum, verbose = False, log = True):
+def complex_spacing_ratio(spectrum, verbose=False, log=True):
     d = len(spectrum)
-    spectrum = np.array(spectrum)[:,0]
+    spectrum = np.array(spectrum)[:, 0]
     if log:
         spectrum = np.log(spectrum)
 
@@ -87,11 +87,11 @@ def complex_spacing_ratio(spectrum, verbose = False, log = True):
 
                     dist_NN = dist
                     idx_NN = j
-                    
+
                 if (dist > dist_NN) and (dist < dist_NNN):
                     dist_NNN = dist
                     idx_NNN = j
-        
+
             z = (spectrum[idx_NN] - spectrum[i]) / (spectrum[idx_NNN] - spectrum[i])
         z_list.append(z)
 
@@ -117,18 +117,20 @@ def spacing_ratio(spectrum):
 
                     dist_NN = dist
                     idx_NN = j
-                    
+
                 if (dist > dist_NN) and (dist < dist_NNN):
                     dist_NNN = dist
                     idx_NNN = j
 
-        z = np.angle(spectrum[i] - spectrum[idx_NN]) / np.angle(spectrum[i] - spectrum[idx_NNN])
+        z = np.angle(spectrum[i] - spectrum[idx_NN]) / np.angle(
+            spectrum[i] - spectrum[idx_NNN]
+        )
         z_list.append(z)
 
 
-def distance_spacing_ratio(spectrum, verbose = False):
+def distance_spacing_ratio(spectrum, verbose=False):
     d = len(spectrum)
-    spectrum = np.array(spectrum)[:,0]
+    spectrum = np.array(spectrum)[:, 0]
     z_list = []
     if verbose:
         decorator = tqdm
@@ -136,10 +138,9 @@ def distance_spacing_ratio(spectrum, verbose = False):
         decorator = lambda x: x
     log_spectrum = np.log(spectrum)
     s = mean_spacing(log_spectrum)
-    rho = unfolding(log_spectrum, 4.5*s)
+    rho = unfolding(log_spectrum, 4.5 * s)
 
     for i in decorator(range(d)):
-        
         dist_NN = float("inf")
         dist_NNN = float("inf")
 
@@ -150,11 +151,11 @@ def distance_spacing_ratio(spectrum, verbose = False):
                     dist_NNN = dist_NN
 
                     dist_NN = dist
-                    
+
                 if (dist > dist_NN) and (dist < dist_NNN):
                     dist_NNN = dist
 
-        z = dist_NNN/ dist_NN
+        z = dist_NNN / dist_NN
         z = z * np.sqrt(rho[i])
         z_list.append(z)
 
@@ -164,9 +165,9 @@ def distance_spacing_ratio(spectrum, verbose = False):
 def unfolding(spectrum, sigma):
     N = spectrum.shape[0]
     spectrum = np.array(spectrum)
-    diff = np.abs(spectrum.reshape(-1,1) - spectrum.reshape(1,-1))
-    expo = -1/(2*sigma**2)*diff**2
-    rho = 1/(2*np.pi*sigma**2*N)*np.sum(np.exp(expo), axis=1)
+    diff = np.abs(spectrum.reshape(-1, 1) - spectrum.reshape(1, -1))
+    expo = -1 / (2 * sigma**2) * diff**2
+    rho = 1 / (2 * np.pi * sigma**2 * N) * np.sum(np.exp(expo), axis=1)
     return rho
 
 
@@ -186,6 +187,3 @@ def mean_spacing(spectrum):
         ms_list.append(dist_NN)
 
     return np.mean(ms_list)
-        
-
-

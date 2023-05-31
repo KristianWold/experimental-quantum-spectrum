@@ -533,7 +533,7 @@ class ExecuteAndCollect:
             if concatenate:
                 circuit_list = circuit_list_spam + circuit_list_map
                 counts_list = self.runner(
-                    circuit_list, backend, shots=shots_map, filename=filename
+                    circuit_list[7000:], backend, shots=shots_map, filename=filename
                 )
                 counts_spam = counts_list[: len(circuit_list_spam)]
                 counts_map = counts_list[len(circuit_list_spam) :]

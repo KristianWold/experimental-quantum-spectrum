@@ -100,7 +100,7 @@ class ModelQuantumMap:
         num_iter=1000,
         N=0,
         verbose=True,
-    ):  
+    ):
         self.inputs = inputs
         self.targets = targets
         self.inputs_val = inputs_val
@@ -115,7 +115,7 @@ class ModelQuantumMap:
         else:
             decorator = lambda x: x
 
-        for step in tqdm(range(num_iter)):
+        for step in decorator(range(num_iter)):
             if N != 0:
                 batch = tf.random.shuffle(indices)[:N]
                 inputs_batch = [tf.gather(data, batch, axis=0) for data in inputs]
@@ -138,7 +138,7 @@ class ModelQuantumMap:
             self.logger.log(self)
             self.counter += 1
 
-        print(loss)
+        # print(loss)
         self.channel.generate_channel()
         self.logger.log(self)
 
