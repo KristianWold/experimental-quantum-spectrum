@@ -141,7 +141,6 @@ class SPAM:
         loss_function=None,
         optimizer=tf.optimizers.Adam(learning_rate=0.01),
     ):
-
         self.d = init.d
         self.init = init
         self.povm = povm
@@ -184,7 +183,7 @@ class SPAM:
                 if step % 100 == 0:
                     print("step {}: loss = {:.4f}".format(step, np.real(loss.numpy())))
 
-        print(np.abs(loss.numpy()))
+        print("Spam loss: ", np.abs(loss.numpy()))
 
         self.generate_SPAM()
 
@@ -196,7 +195,6 @@ class SPAM:
             povm_target = povm_ideal(self.d)
 
         for step in tqdm(range(num_iter)):
-
             with tf.GradientTape() as tape:
                 self.generate_SPAM()
                 loss1 = tf.reduce_mean(tf.abs(self.init.init - init_target) ** 2)

@@ -140,7 +140,7 @@ class ModelQuantumMap:
 
         # print(loss)
         self.channel.generate_channel()
-        self.logger.log(self)
+        self.logger.log(self, push=True)
 
     def zero_optimizer(self):
         for var in self.optimizer.variables():
