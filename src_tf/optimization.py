@@ -42,6 +42,8 @@ class Logger:
 
     def log(self, other, push=False):
         if other.counter % self.sample_freq == 0 or push:
+            other.channel.generate_channel()
+
             if self.N != 0:
                 indices = list(range(other.targets.shape[0]))
                 batch = tf.random.shuffle(indices)[: self.N]
@@ -126,7 +128,7 @@ class ModelQuantumMap:
 
             self.train_step(inputs_batch, targets_batch)
 
-            # self.logger.log(self)
+            self.logger.log(self)
             self.counter += 1
 
         # print(loss)

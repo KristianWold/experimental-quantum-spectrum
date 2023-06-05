@@ -48,7 +48,7 @@ class Hamiltonian(Liouvillian):
 
         I = tf.eye(self.d, dtype=precision)
         HH = kron(H, I) - kron(I, tf.transpose(H))
-        HH = tf.repeat(HH[None, :, :], len(t), axis=0)
+        HH = tf.repeat(HH[None, :, :], t.shape, axis=0)
         L = -1j * HH + 0.5 * ()
         return L
 
@@ -98,15 +98,15 @@ class SpinSpin(Liouvillian):
         IY = kron(self.I, Y)
         IZ = kron(self.I, Z)
 
-        XX = tf.repeat(XX[None, :, :], len(t), axis=0)
-        YY = tf.repeat(YY[None, :, :], len(t), axis=0)
-        ZZ = tf.repeat(ZZ[None, :, :], len(t), axis=0)
-        XI = tf.repeat(XI[None, :, :], len(t), axis=0)
-        YI = tf.repeat(YI[None, :, :], len(t), axis=0)
-        ZI = tf.repeat(ZI[None, :, :], len(t), axis=0)
-        IX = tf.repeat(IX[None, :, :], len(t), axis=0)
-        IY = tf.repeat(IY[None, :, :], len(t), axis=0)
-        IZ = tf.repeat(IZ[None, :, :], len(t), axis=0)
+        XX = tf.repeat(XX[None, :, :], t.shape, axis=0)
+        YY = tf.repeat(YY[None, :, :], t.shape, axis=0)
+        ZZ = tf.repeat(ZZ[None, :, :], t.shape, axis=0)
+        XI = tf.repeat(XI[None, :, :], t.shape, axis=0)
+        YI = tf.repeat(YI[None, :, :], t.shape, axis=0)
+        ZI = tf.repeat(ZI[None, :, :], t.shape, axis=0)
+        IX = tf.repeat(IX[None, :, :], t.shape, axis=0)
+        IY = tf.repeat(IY[None, :, :], t.shape, axis=0)
+        IZ = tf.repeat(IZ[None, :, :], t.shape, axis=0)
 
         H = 0.0
         for j in range(self.degree + 1):
@@ -205,7 +205,7 @@ class JumpOperator:
             J = J - tf.linalg.trace(J) * tf.eye(self.d, dtype=precision) / self.d
         norm = tf.linalg.trace(tf.matmul(J, J, adjoint_a=True))
         J = J / tf.math.sqrt(norm)
-        J = tf.repeat(J[None, :, :], len(t), axis=0)
+        J = tf.repeat(J[None, :, :], t.shape, axis=0)
         return J
 
     def set_trainable(self, trainable):
@@ -229,7 +229,7 @@ class LindbladGenerator:
 
     def __call__(self, t):
         H = self.Hamiltonian(t)
-        I = tf.repeat(tf.eye(self.d, dtype=precision)[None, :, :], len(t), axis=0)
+        I = tf.repeat(tf.eye(self.d, dtype=precision)[None, :, :], t.shape, axis=0)
 
         L = -1j * (tf_kron(H, I) - tf_kron(I, tf.transpose(H, [0, 2, 1])))
 

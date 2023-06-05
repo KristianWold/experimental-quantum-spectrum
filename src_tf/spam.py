@@ -161,31 +161,30 @@ class SPAM:
             inputs_batch = tf.gather(inputs, batch, axis=0)
             targets_batch = tf.gather(targets, batch, axis=0)
 
-            with tf.GradientTape(watch_accessed_variables=False) as tape:
-                tape.watch(self.parameter_list)
-                self.generate_SPAM()
-                outputs_batch = measurement(
-                    tf.repeat(self.init.init[None, :, :], N, axis=0),
-                    U_basis=inputs_batch,
-                    povm=self.povm.povm,
-                )
+            self.train_step(inputs_batch, targets_batch, N)
 
-                # loss = self.d * tf.math.reduce_mean(
-                #    targets_batch * tf.math.log((targets_batch + 1e-32) / outputs_batch)
-                # )
-                loss = self.d * tf.math.reduce_mean(
-                    (targets_batch - outputs_batch) ** 2
-                )
-
-            grads = tape.gradient(loss, self.parameter_list)
-            self.optimizer.apply_gradients(zip(grads, self.parameter_list))
             if verbose:
                 if step % 100 == 0:
                     print("step {}: loss = {:.4f}".format(step, np.real(loss.numpy())))
 
-        print("Spam loss: ", np.abs(loss.numpy()))
+        # print("Spam loss: ", np.abs(loss.numpy()))
 
         self.generate_SPAM()
+
+    @tf.function
+    def train_step(self, inputs_batch, targets_batch, N):
+        with tf.GradientTape(watch_accessed_variables=False) as tape:
+            tape.watch(self.parameter_list)
+            self.generate_SPAM()
+            outputs_batch = measurement(
+                tf.repeat(self.init.init[None, :, :], N, axis=0),
+                U_basis=inputs_batch,
+                povm=self.povm.povm,
+            )
+            loss = self.d * tf.math.reduce_mean((targets_batch - outputs_batch) ** 2)
+
+        grads = tape.gradient(loss, self.parameter_list)
+        self.optimizer.apply_gradients(zip(grads, self.parameter_list))
 
     def pretrain(self, num_iter, targets=[None, None], verbose=True):
         init_target, povm_target = targets
