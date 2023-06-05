@@ -67,7 +67,7 @@ class SpinSpin(Liouvillian):
                 tf.random.normal([6 * self.degree], 0, 1), trainable=True
             )
         self.theta_cos = tf.Variable(
-            tf.random.normal([6 * (self.degree+1)], 0, 1), trainable=True
+            tf.random.normal([6 * (self.degree + 1)], 0, 1), trainable=True
         )
 
         self.parameter_list = [
@@ -109,7 +109,7 @@ class SpinSpin(Liouvillian):
         IZ = tf.repeat(IZ[None, :, :], len(t), axis=0)
 
         H = 0.0
-        for j in range(self.degree+1):
+        for j in range(self.degree + 1):
             H += (
                 theta_cos[j] * tf.math.cos(2 * np.pi * j * t) * XI
                 + theta_cos[self.degree + j] * tf.math.cos(2 * np.pi * j * t) * YI
@@ -140,23 +140,23 @@ class SpinSpin(Liouvillian):
         H += u[0] * XX + u[1] * YY + u[2] * ZZ
 
         return H
-    
+
     def generate_Fourier_series(self):
         if self.theta_sin is not None:
             theta_sin = self.theta_sin.numpy().reshape(6, -1)
         else:
             theta_sin = np.zeros((6, self.degree))
-            
+
         theta_cos = self.theta_cos.numpy().reshape(6, -1)
-        
-        signal_list = [0,0,0,0,0,0]
+
+        signal_list = [0, 0, 0, 0, 0, 0]
         t = np.linspace(0, 1, 1000)
         for idx in range(6):
             for i, theta in enumerate(zip(theta_sin[idx])):
-                signal_list[idx] += theta*np.sin(2*np.pi*(i+1)*t)
+                signal_list[idx] += theta * np.sin(2 * np.pi * (i + 1) * t)
 
             for i, theta in enumerate(zip(theta_cos[idx])):
-                signal_list[idx] += theta*np.cos(2*np.pi*i*t)
+                signal_list[idx] += theta * np.cos(2 * np.pi * i * t)
 
         return t, signal_list
 
@@ -167,10 +167,10 @@ class PolynomialHamiltonian:
         self.degree = degree
 
         self.A = tf.Variable(
-            tf.random.normal([degree, d, d], 0, 1, dtype=tf.float64), trainable=True
+            tf.random.normal([degree + 1, d, d], 0, 1, dtype=tf.float64), trainable=True
         )
         self.B = tf.Variable(
-            tf.random.normal([degree, d, d], 0, 1, dtype=tf.float64), trainable=True
+            tf.random.normal([degree + 1, d, d], 0, 1, dtype=tf.float64), trainable=True
         )
 
         self.parameter_list = [self.A, self.B]
@@ -180,7 +180,7 @@ class PolynomialHamiltonian:
         G = tf.complex(self.A, self.B)
         H = G + tf.linalg.adjoint(G)
         H_ = 0
-        for i in range(self.degree):
+        for i in range(self.degree + 1):
             H_ += H[tf.newaxis, i, :, :] * t**i
 
         return H_
@@ -207,6 +207,13 @@ class JumpOperator:
         J = J / tf.math.sqrt(norm)
         J = tf.repeat(J[None, :, :], len(t), axis=0)
         return J
+
+    def set_trainable(self, trainable):
+        self.A = tf.Variable(self.A, trainable=trainable)
+        self.B = tf.Variable(self.B, trainable=trainable)
+        self.parameter_list = []
+        if trainable:
+            self.parameter_list = [self.A, self.B]
 
 
 class LindbladGenerator:
@@ -246,7 +253,7 @@ class MagnusPropagator(Channel):
         trainable=True,
         generate=True,
         grid_size=100,
-        T = 1,
+        T=1,
     ):
         self.liouvillian = liouvillian
         self.grid_size = grid_size
@@ -266,7 +273,6 @@ class MagnusPropagator(Channel):
         pass
 
     def apply_channel(self, state):
-
         state, t = state
         T = self.super_operator(t)
 
@@ -287,43 +293,45 @@ class MagnusPropagator(Channel):
             T = tf.linalg.matmul(T, eL[i])
 
         return T
-    
+
     @property
     def choi(self):
         return reshuffle(self.super_operator(self.T))
-    
+
     def get_choi(self, T):
         return reshuffle(self.super_operator(T))
-    
 
-def fit_spinspin(channel_target=None,
-                 degree = 0,
-                 gamma = 0,
-                 filename = None,
-                 grid_size = 200,
-                 num_iter = 500):
 
+def fit_spinspin(
+    channel_target=None, degree=0, gamma=0, filename=None, grid_size=200, num_iter=500
+):
     jump_operator = JumpOperator(4, trainable=False)
     H_model = SpinSpin(degree=degree)
 
-    lindblad_model = LindbladGenerator(hamiltonian = H_model, 
-                                       jump_operator = jump_operator,
-                                       gamma = gamma,
-                                       )
+    lindblad_model = LindbladGenerator(
+        hamiltonian=H_model,
+        jump_operator=jump_operator,
+        gamma=gamma,
+    )
 
-    channel_model = MagnusPropagator(liouvillian=lindblad_model, grid_size=grid_size, T = 1)
+    channel_model = MagnusPropagator(
+        liouvillian=lindblad_model, grid_size=grid_size, T=1
+    )
 
-    model = ModelQuantumMap(channel = channel_model,
-                            loss_function = channel_mse_loss,
-                            optimizer = tf.optimizers.Adam(learning_rate=0.01),
-                            logger = Logger(loss_function = channel_fidelity_loss, sample_freq=1, N=0),
-                            )
-    
-    model.train(inputs=None,
-            targets=[channel_target],
-            num_iter=num_iter,
-            N=0,
-            verbose=False,)
+    model = ModelQuantumMap(
+        channel=channel_model,
+        loss_function=channel_mse_loss,
+        optimizer=tf.optimizers.Adam(learning_rate=0.01),
+        logger=Logger(loss_function=channel_fidelity_loss, sample_freq=1, N=0),
+    )
+
+    model.train(
+        inputs=None,
+        targets=[channel_target],
+        num_iter=num_iter,
+        N=0,
+        verbose=False,
+    )
     model.optimizer = None
 
     saver(model, filename + ".model")
