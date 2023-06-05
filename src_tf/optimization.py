@@ -124,23 +124,27 @@ class ModelQuantumMap:
                 inputs_batch = inputs
                 targets_batch = targets
 
-            with tf.GradientTape(watch_accessed_variables=False) as tape:
-                tape.watch(self.channel.parameter_list)
-                self.channel.generate_channel()
+            self.train_step(inputs_batch, targets_batch)
 
-                loss = 0
-                for loss_function in self.loss_function:
-                    loss += loss_function(self.channel, inputs_batch, targets_batch)
-
-            grads = tape.gradient(loss, self.channel.parameter_list)
-            self.optimizer.apply_gradients(zip(grads, self.channel.parameter_list))
-
-            self.logger.log(self)
+            # self.logger.log(self)
             self.counter += 1
 
         # print(loss)
         self.channel.generate_channel()
         self.logger.log(self, push=True)
+
+    @tf.function
+    def train_step(self, inputs_batch, targets_batch):
+        with tf.GradientTape(watch_accessed_variables=False) as tape:
+            tape.watch(self.channel.parameter_list)
+            self.channel.generate_channel()
+
+            loss = 0
+            for loss_function in self.loss_function:
+                loss += loss_function(self.channel, inputs_batch, targets_batch)
+
+        grads = tape.gradient(loss, self.channel.parameter_list)
+        self.optimizer.apply_gradients(zip(grads, self.channel.parameter_list))
 
     def zero_optimizer(self):
         for var in self.optimizer.variables():

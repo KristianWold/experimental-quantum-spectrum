@@ -52,20 +52,24 @@ def tf_kron(A, B):
     return AB
 
 
-def index_generator(n, N=None, trace=True):
-
+def index_generator(n, N=None, trace=True, grid=True):
     index_list1 = np.arange(0, 6**n)
     if trace:
         index_list2 = np.arange(0, 4**n - 1)
     else:
         index_list2 = np.arange(0, 3**n)
 
-    if N is None:
-        N = len(index_list1) * len(index_list2)
+    if grid:
+        if N is None:
+            N = len(index_list1) * len(index_list2)
 
-    index_list1, index_list2 = np.meshgrid(index_list1, index_list2)
-    index_list = np.vstack([index_list1.flatten(), index_list2.flatten()]).T
-    np.random.shuffle(index_list)
+        index_list1, index_list2 = np.meshgrid(index_list1, index_list2)
+        index_list = np.vstack([index_list1.flatten(), index_list2.flatten()]).T
+        np.random.shuffle(index_list)
+    else:
+        index_list1 = np.random.choice(index_list1, N, replace=True)
+        index_list2 = np.random.choice(index_list2, N, replace=True)
+        index_list = np.vstack([index_list1, index_list2]).T
 
     return index_list[:N, 0], index_list[:N, 1]
 

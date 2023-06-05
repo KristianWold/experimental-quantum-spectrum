@@ -84,8 +84,10 @@ def pauli_observable(config, return_mode="density"):
     return result
 
 
-def generate_pauli_circuits(n=None, circuit_target=None, N=None, trace=False):
-    state_index, observ_index = index_generator(n, N, trace=trace)
+def generate_pauli_circuits(
+    n=None, circuit_target=None, N=None, trace=False, grid=True
+):
+    state_index, observ_index = index_generator(n, N, trace=trace, grid=grid)
 
     if trace:
         num_observ = 4
