@@ -30,8 +30,10 @@ def kraus_to_choi(kraus_channel, use_reshuffle=True):
     channel = 0
 
     for i in range(rank):
-        K = kraus[0, i]
-        channel += tf.experimental.numpy.kron(K, tf.math.conj(K))
+        K = kraus[:, i]
+        channel += tf_kron(K, tf.math.conj(K))
+    
+    channel = channel[0]
 
     if use_reshuffle:
         choi = reshuffle(channel)

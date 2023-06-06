@@ -1,0 +1,70 @@
+sqrt iswap:
+
+\begin{quantikz}[row sep={0.8cm,between origins}]
+                          & \gate[wires=2]{\sqrt{iSWAP}} & \qw      \\
+                          &                              & \qw
+\end{quantikz}
+
+\begin{quantikz}[row sep={0.8cm,between origins}]
+                          & \gate{RZ(\frac{\pi}{4})}   & \gate{\sqrt{X}}  & \gate{RZ(-\frac{\pi}{2})} & \ctrl{1} & \gate{\sqrt{X}}          & \gate{RZ(-\frac{\pi}{4})} & \gate{\sqrt{X}} & \ctrl{1} & \gate{RZ(-\frac{\pi}{2})} & \gate{\sqrt{X}}           & \gate{RZ(-\frac{\pi}{2})} & \\
+                          & \gate{RZ(-\frac{3\pi}{4})} & \gate{\sqrt{X}}  & \qw                       & \targ{}  & \gate{RZ(\frac{\pi}{4})} & \qw                       & \qw             & \targ{}  & \gate{\sqrt{X}}           & \gate{RZ(\frac{3\pi}{4})} & \qw                       &
+\end{quantikz}
+
+
+\begin{quantikz}[row sep={0.8cm,between origins}]
+                          & \gate{RZ(\frac{\pi}{4})}   & \gate{\sqrt{X}}  & \gate{RZ(-\frac{\pi}{2})} & \ctrl{1} & \gate{\sqrt{X}}          & \qw \\
+                          & \gate{RZ(-\frac{3\pi}{4})} & \gate{\sqrt{X}}  & \qw                       & \targ{}  & \gate{RZ(\frac{\pi}{4})} & \qw
+\end{quantikz}
+
+\begin{quantikz}[row sep={0.8cm,between origins}]
+                          & \gate{RZ(-\frac{\pi}{4})} & \gate{\sqrt{X}} & \ctrl{1} & \gate{RZ(-\frac{\pi}{2})} & \gate{\sqrt{X}}           & \gate{RZ(-\frac{\pi}{4})} & \qw \\
+                          & \qw                       & \qw             & \targ{}  & \gate{\sqrt{X}}           & \gate{RZ(\frac{3\pi}{4})} & \qw                       & \qw
+\end{quantikz}
+
+
+
+
+
+
+sqrt Y
+
+\begin{quantikz}[row sep={0.8cm,between origins}]
+                          & \gate{\sqrt{Y}} & \qw \\
+\end{quantikz}
+
+\begin{quantikz}[row sep={0.8cm,between origins}]
+                          & \gate{RZ(-\frac{\pi}{2})} & \gate{\sqrt{X}} & \gate{RZ(\frac{\pi}{2})} & \qw\\
+\end{quantikz}
+
+
+
+
+
+
+sqrt W
+
+\begin{quantikz}[row sep={0.8cm,between origins}]
+                          & \gate{\sqrt{W}} & \qw \\
+\end{quantikz}
+
+\begin{quantikz}[row sep={0.8cm,between origins}]
+                          & \gate{RZ(\frac{\pi}{4})} & \gate{\sqrt{X}} & \gate{RZ(\frac{3\pi}{4})} & \gate{\sqrt{X}} & \gate{RZ(\frac{11\pi}{4})} & \qw\\
+\end{quantikz}
+
+
+
+
+
+sqrt V
+
+\begin{quantikz}[row sep={0.8cm,between origins}]
+                          & \gate{\sqrt{V}} & \qw \\
+\end{quantikz}
+
+\begin{quantikz}[row sep={0.8cm,between origins}]
+                          & \gate{RZ(-\frac{\pi}{2})} & \gate{\sqrt{X}} & \gate{RZ(\frac{\pi}{2})} & \qw\\
+\end{quantikz}
+
+\begin{quantikz}[row sep={0.8cm,between origins}]
+                          & \gate{RZ(\frac{\pi}{4})} & \gate{\sqrt{X}} & \gate{RZ(\frac{3\pi}{4})} & \gate{\sqrt{X}} & \gate{RZ(\frac{11\pi}{4})} & \qw\\
+\end{quantikz}

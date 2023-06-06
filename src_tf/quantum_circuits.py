@@ -8,7 +8,7 @@ from qiskit.quantum_info import DensityMatrix
 from qiskit.quantum_info import Operator
 from scipy.linalg import sqrtm
 from tqdm.notebook import tqdm
-from qiskit.circuit.library import iSwapGate, XGate, YGate, HGate, CXGate, RGate
+from qiskit.circuit.library import iSwapGate, XGate, YGate, HGate, CXGate, RGate, RZGate
 
 
 def pqc_basic(n, L):
