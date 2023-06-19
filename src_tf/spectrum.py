@@ -187,3 +187,17 @@ def mean_spacing(spectrum):
         ms_list.append(dist_NN)
 
     return np.mean(ms_list)
+
+
+def coat_spectrum(spectrum, sigma=0.1, grid_size=100):
+    """Coat each eigenvalue with a Gaussian distribution."""
+
+    spectrum = np.real(spectrum)
+    x_grid = np.linspace(-1, 1, grid_size)
+    y_grid = np.linspace(-1, 1, grid_size)
+    X, Y = np.meshgrid(x_grid, y_grid)
+    rho = 0
+    for eig in spectrum:
+        rho += np.exp(-((X - eig[0]) ** 2 + (Y - eig[1]) ** 2) / (2 * sigma**2))
+
+    return rho
