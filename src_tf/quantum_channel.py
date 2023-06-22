@@ -125,6 +125,18 @@ class Channel:
     @property
     def choi(self):
         pass
+    
+    @property
+    def num_parameters(self):
+        num_param = 0
+        for param in self.parameter_list:
+            dims = 1
+            for dim in param.shape:
+                dims *= dim
+            num_param += dims
+        
+        return num_param
+        
 
 
 class ChoiMap(Channel):

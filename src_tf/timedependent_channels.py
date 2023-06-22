@@ -300,6 +300,7 @@ class MagnusPropagator(Channel):
 
     def get_choi(self, T):
         return reshuffle(self.super_operator(T))
+    
 
 
 def fit_spinspin(
