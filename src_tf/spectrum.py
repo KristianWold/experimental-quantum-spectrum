@@ -201,3 +201,7 @@ def coat_spectrum(spectrum, sigma=0.1, grid_size=100):
         rho += np.exp(-((X - eig[0]) ** 2 + (Y - eig[1]) ** 2) / (2 * sigma**2))
 
     return rho
+
+
+def hopkins_statistic(spectrum):
+    angular = np.angle(spectrum)
