@@ -203,5 +203,25 @@ def coat_spectrum(spectrum, sigma=0.1, grid_size=100):
     return rho
 
 
-def hopkins_statistic(spectrum):
-    angular = np.angle(spectrum)
+def hopkins_statistic(spectrum, split=10):
+    angles = np.angle(spectrum)
+    N = len(angles)
+    m = N//split
+    
+    idx = np.random.choice(N, m, replace=False)
+    X = angles[idx]
+    Y = np.random.uniform(0, 2*np.pi, m)
+    distance_X = np.abs(X.reshape(-1, 1) - angles.reshape(1, -1))
+    distance_X[distance_X == 0] = np.inf
+    u = np.min(distance_X, axis=1)
+
+    distance_Y = np.abs(Y.reshape(-1, 1) - angles.reshape(1, -1))
+    w = np.min(distance_Y, axis=1)
+    
+    u_sum = np.sum(u)
+    w_sum = np.sum(w)
+
+    hs = u_sum / (u_sum + w_sum)
+
+    return hs, u_sum, w_sum
+    
