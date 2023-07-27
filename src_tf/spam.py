@@ -161,7 +161,7 @@ class SPAM:
             inputs_batch = tf.gather(inputs, batch, axis=0)
             targets_batch = tf.gather(targets, batch, axis=0)
 
-            self.train_step(inputs_batch, targets_batch, N)
+            loss = self.train_step(inputs_batch, targets_batch, N)
 
             if verbose:
                 if step % 100 == 0:
@@ -185,6 +185,8 @@ class SPAM:
 
         grads = tape.gradient(loss, self.parameter_list)
         self.optimizer.apply_gradients(zip(grads, self.parameter_list))
+
+        return loss
 
     def pretrain(self, num_iter, targets=[None, None], verbose=True):
         init_target, povm_target = targets

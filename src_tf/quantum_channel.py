@@ -32,7 +32,7 @@ def kraus_to_choi(kraus_channel, use_reshuffle=True):
     for i in range(rank):
         K = kraus[:, i]
         channel += tf_kron(K, tf.math.conj(K))
-    
+
     channel = channel[0]
 
     if use_reshuffle:
@@ -125,7 +125,7 @@ class Channel:
     @property
     def choi(self):
         pass
-    
+
     @property
     def num_parameters(self):
         num_param = 0
@@ -134,9 +134,8 @@ class Channel:
             for dim in param.shape:
                 dims *= dim
             num_param += dims
-        
+
         return num_param
-        
 
 
 class ChoiMap(Channel):
@@ -148,7 +147,6 @@ class ChoiMap(Channel):
         trainable=True,
         generate=True,
     ):
-
         self.d = d
         self.rank = rank
 
@@ -198,7 +196,6 @@ class IntegrableChoiMap(Channel):
         trainable=True,
         generate=True,
     ):
-
         self.d = d
         self.rank = rank
 
@@ -309,7 +306,6 @@ class IdentityChannel(Channel):
         # self.super_operator = reshuffle(choi)
 
     def apply_channel(self, state):
-
         return state
 
     @property
@@ -326,7 +322,6 @@ class PTPMap:
         trainable=True,
         generate=True,
     ):
-
         self.d = d
         self.rank = rank
 
@@ -368,7 +363,6 @@ class PMap:
         trainable=True,
         generate=True,
     ):
-
         self.d = d
         self.rank = rank
 
