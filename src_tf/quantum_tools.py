@@ -102,6 +102,9 @@ def circuit_to_matrix(circuit):
 
 
 def channel_to_choi(channel_list):
+    if not isinstance(channel_list, list):
+        channel_list = [channel_list]
+
     d = channel_list[0].d
     choi = tf.zeros((d**2, d**2), dtype=precision)
     M = np.zeros((d**2, d, d))
@@ -217,3 +220,12 @@ def spectrum_to_angular(spectrum):
 def generate_haar_random(d, rng=np.random.default_rng()):
     U = tf.cast(Operator(random_unitary(d, seed=rng).data), dtype=precision)
     return U
+
+
+def reshuffle(A):
+    d = int(np.sqrt(A.shape[0]))
+    A = tf.reshape(A, (d, d, d, d))
+    A = tf.einsum("jklm -> jlkm", A)
+    A = tf.reshape(A, (d**2, d**2))
+
+    return A

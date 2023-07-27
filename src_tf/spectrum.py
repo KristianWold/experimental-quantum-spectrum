@@ -12,15 +12,11 @@ from tqdm.notebook import tqdm
 from quantum_tools import *
 from utils import *
 from set_precision import *
-from quantum_channel import *
 
 
 def channel_spectrum(input, use_coords=True, keep_real=True, keep_unity=True, tol=1e-4):
-    if isinstance(input, Channel):
-        eig, _ = tf.linalg.eig(reshuffle(input.choi))
-        eig = tf.expand_dims(eig, axis=1)
-    else:
-        eig = input
+    eig, _ = tf.linalg.eig(reshuffle(input.choi))
+    eig = tf.expand_dims(eig, axis=1)
 
     if not keep_real:
         mask = tf.abs(tf.math.imag(eig)) > tol

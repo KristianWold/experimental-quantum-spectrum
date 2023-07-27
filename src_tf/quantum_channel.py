@@ -13,15 +13,7 @@ from quantum_tools import *
 from spam import *
 from utils import *
 from set_precision import *
-
-
-def reshuffle(A):
-    d = int(np.sqrt(A.shape[0]))
-    A = tf.reshape(A, (d, d, d, d))
-    A = tf.einsum("jklm -> jlkm", A)
-    A = tf.reshape(A, (d**2, d**2))
-
-    return A
+from spectrum import *
 
 
 def kraus_to_choi(kraus_channel, use_reshuffle=True):
@@ -55,6 +47,25 @@ def effective_rank(channel):
 
     rank_eff = d2 / purity
     return rank_eff
+
+
+def channel_to_super_operator(channel_list, invert_list=None):
+    if not isinstance(channel_list, list):
+        channel_list = [channel_list]
+
+    if invert_list is None:
+        invert_list = [False] * len(channel_list)
+
+    d = channel_list[0].d
+    super_operator_full = tf.eye(d**2, dtype=precision)
+
+    for channel, invert in zip(channel_list, invert_list):
+        super_operator = reshuffle(channel.choi)
+        if invert:
+            super_operator = tf.linalg.inv(super_operator)
+        super_operator_full = super_operator @ super_operator_full
+
+    return super_operator_full
 
 
 def channel_to_choi_map(channel_list, invert_list=None):
@@ -100,10 +111,6 @@ def channel_steady_state(channel):
     return steady_state
 
 
-def dilute_channel(U, c, kraus_map):
-    pass
-
-
 class Channel:
     def __init__(self, d, rank, spam):
         self.d = d
@@ -136,6 +143,55 @@ class Channel:
             num_param += dims
 
         return num_param
+
+
+class DilutedChannel:
+    def __init__(self, channel_a, channel_b, p=0.5):
+        self.channel_a = channel_a
+        self.channel_b = channel_b
+
+        self.p = tf.cast(p, precision)
+        self.d = self.channel_a.d
+
+    def apply_channel(self, state):
+        state_a = self.channel_a.apply_channel(state)
+        state_b = self.channel_b.apply_channel(state)
+
+        state = (1 - self.p) * state_a + self.p * state_b
+
+        return state
+
+    def super_operator(self):
+        return reshuffle(self.choi)
+
+    @property
+    def choi(self):
+        return channel_to_choi(self)
+
+    def spectrum(self, **kwargs):
+        return channel_spectrum(self, **kwargs)
+
+
+class ConcatChannel(Channel):
+    def __init__(self, channel_list):
+        self.channel_list = channel_list
+        self.d = self.channel_list[0].d
+
+    def apply_channel(self, state):
+        for channel in self.channel_list:
+            state = channel.apply_channel(state)
+
+        return state
+
+    def super_operator(self):
+        return reshuffle(self.choi)
+
+    @property
+    def choi(self):
+        return channel_to_choi(self)
+
+    def spectrum(self, **kwargs):
+        return channel_spectrum(self, **kwargs)
 
 
 class ChoiMap(Channel):
