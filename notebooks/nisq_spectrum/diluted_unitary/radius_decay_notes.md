@@ -1,23 +1,5 @@
-# Diluted Unitary Fitting
-
-We explore the capabilities of so-called Diluted Unitary models for recreating statistical spectral properties of NISQ circuits.
-
-Diluted Unitaries are quantum maps on the form
-
-$T(\rho) = (1-p)U\rho U^{\dagger} + p \sum_{i=1}^r K_i \rho K_i^{\dagger}$, where $K_i$ randomly sampled Kraus operators by the method of blocking Haar random (semi-)unitary matrices. U is usually also Haar random, or some specific unitary circuit description. This leaves just two free parameters of the Diluted Unitary: A decoherence parameter $p$ and the Kraus rank $r$.
-
-The quantum channels induced by NISQ circuits are ultimatly a result of the circuit description and the specific details of the hardware. It is not a priori obvious that any characteristics of the resulting spectra can be captured by a simple model like the Diluted Unitary
-
-To quantify a notion of similarity between the NISQ circuit spectra and Diluted Unitaries, we introduce a measure that captures the course-grained features that are similar in both type of spectra. At a first glance, NISQ circuits and Diluted Unitaries exhibit annulus-shaped spectra with a well defined inner and out radius. The annulus can be defined in terms of inner radius and outer, or, equivalently, mean radius and standard deviation of radius, if one imagines it as a uniform mass object.
-
-We introduce the Annulus distance (AD), which is defined as
-
-AD(spectrum1, spectrum2) = |mean_radial(spectrum1) - mean_radial(spectrum2)| + |std_radial(spectrum1) - std_radial(spectrum2)|
-
-Note that this is a quite course-grained metric, as it only captures the first and second momenta of the distributions in the radial direction. It neglects higher order momenta, details of angular distribution, and how radial and angular dependencies interact. In particular, it is not sensitive to higher order statistics, such as complex spacing ratio of the eigenvalues.
-
-## Results and Discussion
-
+<script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+<script type="text/x-mathjax-config"> MathJax.Hub.Config({ tex2jax: {inlineMath: [['$', '$']]}, messageStyle: "none" });</script>
 
 # Collapsing Inner and Outer Radius in NISQ Spectra
 
@@ -25,17 +7,13 @@ The retrieved spectra of NISQ variational circuits are characteristic: They are 
 
 What happens to the NISQ spectra when we increase the amount of noise? There are at least two ways we can increase the amount of noise when impementing NISQ parametric: Increasing the number of variational layers (simply adding more gates), or ideling the computer after implementing the circuit. These two ways can be attempted to be formulated as Diluted Unitary analogs. Here is the Repeated Diluted Unitary model:
 
-$
-\mathbb{T}_{Rep} = \prod_{i=1}^L (p\mathbb{U}_i + (1-p)\mathbb{K}_i),
-$
+$\mathbb{T} _{Rep} = \prod _{i=1}^L (p\mathbb{U} _i + (1-p)\mathbb{K} _i),$
 
 where $\mathbb{U}_i$ is some slice of the unitary circuit (either a single gate, a layer, or buch of layers), and $\mathbb{K}_i$ is a random Kraus map of some rank. $p$ controls the amount of noise, and $L$ is the number of slices.
 
 Here is the Delay Diluted Unitary model:
 
-$
-\mathbb{T}_{Delay} = [\prod_{i=1}^L (qI + (1-q)\mathbb{K}_i)] (p\mathbb{U} + (1-p)\mathbb{K}).
-$
+$\mathbb{T} _{Delay} = [\prod _{i=1}^L (qI + (1-q)\mathbb{K} _i)] (p\mathbb{U} + (1-p)\mathbb{K}).$
 
 Here, the dissipation is modelled by a repeated diluted identity channel. $q$ controls the amount of noise from the idling, and $p$ controls the amount of noise from the circuit. Alternatively, the dissipation can be modelled by a single diluted identity channel, but then a choice needs to be made on how $q$ and the rank of $\mathbb{K}_i$ should relate to the idling time.
 
@@ -46,9 +24,7 @@ Some few observations
 
 By expanding $\mathbb{T}_{Rep}$, we get many cross terms between unitaries and kraus maps:
 
-$
-\mathbb{T}_{Rep} = p^L\mathbb{U} + \sum \cdots,
-$
+$\mathbb{T}_{Rep} = p^L\mathbb{U} + \sum \cdots,$
 here the sum contains all terms with at least one Kraus map. Since the Kraus maps are random, the cross terms will be random. I.e., for a random Kraus operator $K_i$, $U K_i$ follows the same distribution, however $U$ is sampled (is this true? my intuition says yes). The repeated diluted unitary may be reformulated into a standard diluted unitary:
 
 $
@@ -84,8 +60,7 @@ Synthetic Delay Diluted Unitary. The rank and $p$ of the first is kept as in the
 
 ![fishy](figures/belem_4qubit_repeated.png)
 
-Indeed, we get a slow, exponentially decaying dehaviour of the inner and outer radius, as with the repeated diluted unitary. This is not surprising, becase when we expand $[\prod_{i=1}^L (qI + (1-q)\mathbb{K}_i)]$, we do get an exponential term $(1-q^L)$ in front of the Kraus map. Of course, the inner and outer radii decay exponentially, not in the concave way as in the experiment. We could swap the model for the idling channel to a single diluted identity channel, but how to we parameterize the rank and $q$? We know we can find a set of $q$ 's and ranks by doing Diluted Unitary Fitting on the real data, but this is not a model with predictive power. What are we seeking?
-
+Indeed, we get a slow, exponentially decaying dehaviour of the inner and outer radius, as with the repeated diluted unitary. This is not surprising, becase when we expand $[\prod_{i=1}^L (qI + (1-q)\mathbb{K}_i)]$, we do get an exponential term $(1-q^L)$ in front of the Kraus map. Of course, the inner and outer radii decay exponentially, not in the concave way as in the experiment. We could swap the model for the idling channel to a single diluted identity channel, but how to we parameterize the rank and $q$? We know we can find a set of $q$ 's and ranks by doing Diluted Unitary Fitting on the real data, but this is not a model with predictive power. What would then be a good way to procede here?
 
 
 
