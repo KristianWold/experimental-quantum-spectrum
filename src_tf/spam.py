@@ -235,3 +235,11 @@ class IdealPOVM:
     def __init__(self, d):
         self.d = d
         self.povm = povm_ideal(d)
+
+
+def povm_fidelity(povm_a, povm_b):
+    d = povm_a.shape[0]
+    ab = tf.matmul(povm_a, povm_b)
+    ab_sqrt = tf.linalg.sqrtm(ab)
+    fidelity = tf.math.reduce_sum(tf.linalg.trace(ab_sqrt))/d
+    return fidelity
