@@ -233,3 +233,13 @@ def fit_model(
     model.targets_val = None
 
     return model
+
+
+def model_remove_gradients(model):
+    model.optimizer = None
+    model.channel.spam.optimizer = None
+    model.inputs = None
+    model.targets = None
+    model.inputs_val = None
+    model.targets_val = None
+    return model
