@@ -118,6 +118,10 @@ class DilutedKrausMap(KrausMap):
         self.spam = spam
         self.kraus_part = kraus_part
 
+        if spam is None:
+            spam = IdealSPAM(d=self.d)
+        self.spam = spam
+
         self.parameter_list = self.kraus_part.parameter_list
 
         self.U = U
