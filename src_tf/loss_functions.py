@@ -58,6 +58,33 @@ class ProbabilityMSE:
         return loss
 
 
+class EnsambleProbabilityMSE:
+    """MSE loss over measured computational basis probabilities"""
+
+    def __call__(self, channel, input, target):
+        N = target.shape[0]
+        d = channel.spam.d
+        if isinstance(input, list):
+            U_prep, U_basis = input
+        else:
+            U_prep = input
+            U_basis = None
+
+        state = tf.repeat(tf.expand_dims(channel.spam.init.init, axis=0), N, axis=0)
+        state = apply_unitary(state, U_prep)
+        state_list = channel.apply_channel(state)
+
+        loss_list = []
+        for _state in state_list:
+            output = measurement(_state, U_basis, channel.spam.povm.povm)
+            loss = d**2 * tf.math.reduce_mean((output - target) ** 2)
+            loss_list.append(loss)
+
+        loss_total = tf.math.reduce_mean(loss_list)
+
+        return loss_total
+
+
 class ProbabilityRValue:
     """MSE loss over measured computational basis probabilities"""
 
@@ -426,31 +453,3 @@ class MininumAverageEigenvalue:
         eig, _ = tf.linalg.eigh(state)
         loss = tf.math.reduce_mean(eig)
         return loss[0]
-
-
-class EnsambleProbabilityMSE:
-    """MSE loss over measured computational basis probabilities"""
-
-    def __call__(self, channel, input, target):
-        N = target.shape[0]
-        d = channel.spam.d
-        if isinstance(input, list):
-            U_prep, U_basis = input
-        else:
-            U_prep = input
-            U_basis = None
-
-        state = tf.repeat(tf.expand_dims(channel.spam.init.init, axis=0), N, axis=0)
-        state = apply_unitary(state, U_prep)
-        state_list = channel.apply_channel(state)
-        
-        
-        lost_list = []
-        for state in state_list:
-            output = measurement(state, U_basis, channel.spam.povm.povm)
-            loss = d**2 * tf.math.reduce_mean((output - target) ** 2)
-            lost_list.append(loss)
-        
-        loss = tf.math.reduce_mean(lost_list)
-
-        return loss

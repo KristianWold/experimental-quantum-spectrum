@@ -24,7 +24,6 @@ class UnitaryMap(Channel):
         trainable=True,
         generate=True,
     ):
-
         self.d = d
 
         if spam is None:
@@ -65,7 +64,6 @@ class KrausMap(Channel):
         trainable=True,
         generate=True,
     ):
-
         self.d = d
         self.rank = rank
         self.trainable = trainable
@@ -112,7 +110,6 @@ class DilutedKrausMap(KrausMap):
         trainable=True,
         generate=True,
     ):
-
         self.d = U.shape[0]
         self.rank = kraus_part.rank
         self.spam = spam
@@ -159,7 +156,7 @@ class DilutedKrausMap(KrausMap):
     @property
     def choi(self):
         return kraus_to_choi(self)
-    
+
 
 class EnsambleDilutedUnitary:
     def __init__(
@@ -194,18 +191,18 @@ class EnsambleDilutedUnitary:
                 _U = generate_unitary(self.d)
             else:
                 _U = U
-            self.ensamble.append(DilutedKrausMap(U=_U, 
-                                                 c=c, 
-                                                kraus_part = KrausMap(d=d,
-                                                                    rank = rank, 
-                                                                    trainable=False
-                                                                    ),
-                                                spam=spam, 
-                                                trainable=False,))
-            
+            self.ensamble.append(
+                DilutedKrausMap(
+                    U=_U,
+                    c=c,
+                    kraus_part=KrausMap(d=d, rank=rank, trainable=False),
+                    spam=spam,
+                    trainable=False,
+                )
+            )
+
             self.ensamble[-1].k = self.k
             self.ensamble[-1].parameter_list = self.parameter_list
-            
 
         if generate:
             self.generate_channel()
@@ -213,12 +210,11 @@ class EnsambleDilutedUnitary:
     def apply_channel(self, state):
         state_list = []
         for channel in self.ensamble:
-            state = channel.apply_channel(state)
-            state_list.append(state)
+            state_new = channel.apply_channel(state)
+            state_list.append(state_new)
 
         return state_list
 
-    
     def generate_channel(self):
         for channel in self.ensamble:
             channel.generate_channel()
@@ -233,7 +229,6 @@ class ExtractedKrausMap(KrausMap):
         trainable=True,
         generate=True,
     ):
-
         KrausMap.__init__(
             self, d=d, rank=rank - 1, spam=spam, trainable=trainable, generate=False
         )
@@ -275,7 +270,6 @@ class SquaredKrausMap(KrausMap):
         trainable=True,
         generate=True,
     ):
-
         KrausMap.__init__(d, rank, spam, trainable, generate=generate)
 
     def apply_channel(self, state):
@@ -297,7 +291,6 @@ class TwoLocalKrausMap(KrausMap):
         trainable=True,
         generate=True,
     ):
-
         self.d = d
         self.n = int(np.log2(d))
         self.I = tf.eye(2, dtype=precision)
