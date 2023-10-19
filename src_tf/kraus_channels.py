@@ -159,6 +159,69 @@ class DilutedKrausMap(KrausMap):
     @property
     def choi(self):
         return kraus_to_choi(self)
+    
+
+class EnsambleDilutedUnitary:
+    def __init__(
+        self,
+        d=None,
+        c=None,
+        rank=None,
+        U=None,
+        samples=None,
+        spam=None,
+        trainable=True,
+        generate=True,
+    ):
+        self.d = d
+        self.rank = rank
+        self.spam = spam
+        self.samples = samples
+        self.trainable = trainable
+
+        if spam is None:
+            spam = IdealSPAM(d=d)
+        self.spam = spam
+
+        k = -np.log(1 / c - 1)
+        self.k = tf.Variable(k, trainable=True)
+
+        self.parameter_list = [self.k]
+
+        self.ensamble = []
+        for _ in range(self.samples):
+            if U is None:
+                _U = generate_unitary(self.d)
+            else:
+                _U = U
+            self.ensamble.append(DilutedKrausMap(U=_U, 
+                                                 c=c, 
+                                                kraus_part = KrausMap(d=d,
+                                                                    rank = rank, 
+                                                                    trainable=False
+                                                                    ),
+                                                spam=spam, 
+                                                trainable=False,))
+            
+            self.ensamble[-1].k = self.k
+            self.ensamble[-1].parameter_list = self.parameter_list
+            
+
+        if generate:
+            self.generate_channel()
+
+    def apply_channel(self, state):
+        state_list = []
+        for channel in self.ensamble:
+            state = channel.apply_channel(state)
+            state_list.append(state)
+
+        return state_list
+
+    
+    def generate_channel(self):
+        for channel in self.ensamble:
+            channel.generate_channel()
 
 
 class ExtractedKrausMap(KrausMap):
