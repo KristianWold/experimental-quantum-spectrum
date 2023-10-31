@@ -135,7 +135,7 @@ class ModelQuantumMap:
         self.channel.generate_channel()
         self.logger.log(self, push=True)
 
-    @tf.function
+    #@tf.function
     def train_step(self, inputs_batch, targets_batch):
         with tf.GradientTape(watch_accessed_variables=False) as tape:
             tape.watch(self.channel.parameter_list)

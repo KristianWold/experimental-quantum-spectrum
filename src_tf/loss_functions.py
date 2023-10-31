@@ -179,28 +179,33 @@ def channel_mse_loss(channel, input, target):
 class SpectrumDistance:
     """Distance measure between spectra"""
 
-    def __init__(self, sigma=0.1, k=1000):
+    def __init__(self, sigma=0.1, k=1000, mode = "density", remove_shift = True):
         self.sigma = sigma
         self.sigma_ = sigma
         self.k = k
-        self.mode = "density"
+        self.remove_shift = remove_shift
+        self.mode = mode
         self.t = 0
 
     def __call__(self, channel, input, target):
-        spectrum_target = input[0]
+        spectrum_target = target[0]
         spectrum_model = channel_spectrum(channel)
 
         if self.mode == "density":
             loss = self.overlap(spectrum_model, spectrum_model)
             loss += -2 * self.overlap(spectrum_model, spectrum_target)
-            # loss += self.overlap(spectrum_target, spectrum_target)
+            if not self.remove_shift:
+                loss += self.overlap(spectrum_target, spectrum_target)
 
         if self.mode == "pairwise":
-            connections = greedy_pair_distance(spectrum_model, spectrum_target)
-            loss = pair_distance(spectrum_model, spectrum_target, connections)
+            connections = self.greedy_pair_distance(spectrum_model, spectrum_target)
+            loss = self.pair_distance(spectrum_model, spectrum_target, connections)
 
         self.t += 1
-        self.sigma = np.sqrt(self.k) * self.sigma_ / np.sqrt(self.k + self.t)
+        if self.k is not None:
+            self.sigma = np.sqrt(self.k) * self.sigma_ / np.sqrt(self.k + self.t)
+        else:
+            self.sigma = self.sigma_
 
         return loss
 
@@ -242,6 +247,9 @@ class SpectrumDistance:
     def greedy_pair_distance(self, spectrum_a, spectrum_b):
         connections = []
         not_connected = len(spectrum_a) * [True]
+
+        spectrum_a = tf.stop_gradient(spectrum_a)
+        spectrum_b = tf.stop_gradient(spectrum_b)
 
         aa = tf.math.reduce_sum(spectrum_a * spectrum_a, axis=1, keepdims=True)
         bb = tf.math.reduce_sum(spectrum_b * spectrum_b, axis=1, keepdims=True)

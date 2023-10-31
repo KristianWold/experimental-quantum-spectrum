@@ -36,6 +36,10 @@ def kron(*args):
 
 
 def tf_kron(A, B):
+    if len(A.shape) == 2:
+        A = tf.expand_dims(A, axis=0)
+        B = tf.expand_dims(B, axis=0)
+
     batch = A.shape[0]
     dim_a1 = A.shape[1]
     dim_a2 = A.shape[2]
@@ -48,7 +52,7 @@ def tf_kron(A, B):
     AB = tf.reshape(AB, [batch, dim_a1, dim_a2, dim_b1, dim_b2])
     AB = tf.transpose(AB, [0, 1, 3, 2, 4])
     AB = tf.reshape(AB, [batch, dim_a1 * dim_b1, dim_a2 * dim_b2])
-
+    
     return AB
 
 

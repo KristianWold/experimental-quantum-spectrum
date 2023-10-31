@@ -168,6 +168,8 @@ def unfolding(spectrum, sigma):
 
 
 def mean_spacing(spectrum):
+    if len(spectrum.shape) == 2:
+        spectrum = spectrum[:, 0] + 1j * spectrum[:, 1]
     d = len(spectrum)
     ms_list = []
     for i in range(d):

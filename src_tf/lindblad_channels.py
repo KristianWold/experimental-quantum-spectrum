@@ -59,9 +59,9 @@ class CompactLindbladMap(Channel):
         phi = reshuffle(choi)
         phi_star = partial_trace(choi)
         expo = (
-            -1j * self.alpha * (kron(self.I, H) - kron(tf.transpose(H), self.I))
+            -1j * self.alpha * (tf_kron(self.I, H)[0] - tf_kron(tf.transpose(H), self.I)[0])
             + phi
-            - 0.5 * (kron(tf.transpose(phi_star), self.I) + kron(self.I, phi_star))
+            - 0.5 * (tf_kron(tf.transpose(phi_star), self.I)[0] + tf_kron(self.I, phi_star)[0])
         )
 
         self.super_operator = tf.linalg.expm(self.beta * expo)
