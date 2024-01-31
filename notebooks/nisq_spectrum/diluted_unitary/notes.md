@@ -29,3 +29,15 @@ Note that this is a quite course-grained metric, as it only captures the first a
 Instead of fitting Diluted Unitaries to experimental spectra based on geometric loss functions, like Annulus distance, we may try to optimize $p$ and $r$ of the Diluted Unitary on the probabilities themselve.
 
 Ultimatly, this failed. Diluted Unitaries and experimental spectra have vanishingly small channel fidelity between them, even when the unitary used is the circuit description. When $p$ and $r$ are optimized, the channel fidelity improves slightly (still bad), but at the expense of similarities of the spectral density.
+
+
+## To do:
+
+compute P and rank for 3 qubit repeated experiments
+Make table of experimental hyperparamteres
+Make table of optimization hyperparamters
+Make plot with loss of optimization (experiment, diluted, and random probs)
+Make random probabilities map fitting
+
+
+
