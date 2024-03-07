@@ -128,7 +128,7 @@ class KLDiv:
             target[mask] * tf.math.log(target[mask] / output[mask])
         )
 
-        return loss
+        return loss / N
 
 
 class LogLikelihood:
@@ -179,7 +179,7 @@ def channel_mse_loss(channel, input, target):
 class SpectrumDistance:
     """Distance measure between spectra"""
 
-    def __init__(self, sigma=0.1, k=1000, mode = "density", remove_shift = True):
+    def __init__(self, sigma=0.1, k=1000, mode="density", remove_shift=True):
         self.sigma = sigma
         self.sigma_ = sigma
         self.k = k
