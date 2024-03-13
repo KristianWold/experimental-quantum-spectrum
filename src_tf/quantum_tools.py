@@ -8,6 +8,7 @@ from qiskit.quantum_info import DensityMatrix
 from qiskit.quantum_info import Operator, random_unitary
 from scipy.linalg import sqrtm
 from tqdm.notebook import tqdm
+from scipy.linalg import sqrtm
 
 from utils import *
 from set_precision import *
@@ -42,11 +43,11 @@ def partial_transpose(state, qubit):
 
 
 def state_fidelity(A, B):
-    sqrtB = tf.linalg.sqrtm(B)
+    sqrtB = sqrtm(B)
     C = sqrtB @ A @ sqrtB
 
-    sqrtC = tf.linalg.sqrtm(C)
-    fidelity = tf.linalg.trace(sqrtC)
+    sqrtC = sqrtm(C)
+    fidelity = trace(sqrtC)
     return tf.abs(fidelity) ** 2
 
 
