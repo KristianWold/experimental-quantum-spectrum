@@ -47,7 +47,7 @@ def state_fidelity(A, B):
     C = sqrtB @ A @ sqrtB
 
     sqrtC = sqrtm(C)
-    fidelity = trace(sqrtC)
+    fidelity = tf.linalg.trace(sqrtC)
     return tf.abs(fidelity) ** 2
 
 
