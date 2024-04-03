@@ -1,0 +1,5 @@
+Present-day noisy intermediate-scale quantum (NISQ) computing platforms implement dissipative quantum channels rather than ideal unitary operations. However, while the universal properties of random unitary circuits have been thoroughly analyzed, many questions regarding universal features of dissipative quantum channels remain unaddressed.
+
+Through the development of a machine learning-assisted tomography algorithm, we show that the spectral properties obtained from variational circuits executed on the IBM Quantum platform exhibit universal features akin to a recently introduced set of random quantum maps. Notably, the spectral density undergoes a ring-to-disk transition as a function of the circuit's depth. 
+
+Our results establish novel connections between NISQ computing, machine learning, and random matrix theory, and highlight present-day quantum computer prototypes as flexible experimental platforms to explore Dissipative Quantum Chaos.
