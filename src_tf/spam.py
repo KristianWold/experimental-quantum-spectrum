@@ -165,7 +165,7 @@ class SPAM:
 
             if verbose:
                 if step % 100 == 0:
-                    print("step {}: loss = {:.4f}".format(step, np.real(loss.numpy())))
+                    print("step {}: loss = {}".format(step, np.real(loss.numpy())))
 
         # print("Spam loss: ", np.abs(loss.numpy()))
 
