@@ -242,14 +242,3 @@ def povm_fidelity(povm_a, povm_b):
     ab_sqrt = tf.linalg.sqrtm(ab)
     fidelity = tf.math.reduce_sum(tf.linalg.trace(ab_sqrt)) / d
     return fidelity
-
-
-def generate_spam_benchmark(n=3, c1=1, c2=1):
-    d = 2**n
-
-    init_target = InitialState(d, c=c1)
-    povm_target = POVM(d, c=c2)
-
-    spam_target = SPAM(init=init_target, povm=povm_target)
-
-    return spam_target

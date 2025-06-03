@@ -91,8 +91,7 @@ class ModelQuantumMap:
         if not isinstance(self.loss_function, list):
             self.loss_function = [self.loss_function]
 
-    #   @profile
-    #   @tf.function
+
     def train(
         self,
         inputs=None,

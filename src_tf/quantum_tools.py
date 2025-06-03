@@ -56,7 +56,7 @@ def expectation_value(probs, observable):
     return ev
 
 
-# @profile
+
 def generate_ginibre(dim1, dim2, trainable=False, complex=True):
     A = tf.random.normal((dim1, dim2), 0, 1, dtype=tf.float64)
 
@@ -200,11 +200,3 @@ def reshuffle(A):
     A = tf.reshape(A, (d**2, d**2))
 
     return A
-
-
-def random_hamiltonian(d):
-    A = tf.random.normal((d, d), 0, 1, dtype=tf.float64)
-    B = tf.random.normal((d, d), 0, 1, dtype=tf.float64)
-    G = tf.complex(A, B)
-    H = (G + tf.linalg.adjoint(G)) / 2
-    return H

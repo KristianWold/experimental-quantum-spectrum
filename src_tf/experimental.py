@@ -293,19 +293,3 @@ class ExecuteAndCollect:
                 pickle.dump(probs, handle)
 
         return counts_list
-
-
-def generate_spam_data(spam_target, N_spam=None, shots=1024):
-    n = int(np.log2(spam_target.d))
-    inputs_spam, _ = generate_pauliInput_circuits(n)
-    N_spam = inputs_spam.shape[0]
-
-    state = tf.repeat(spam_target.init.init[None, :, :], N_spam, axis=0)
-    state = apply_unitary(state, inputs_spam)
-    targets_spam = measurement(state, povm=spam_target.povm.povm)
-
-    # add noise
-    if shots != 0:
-        targets_spam = add_shot_noise(targets_spam, shots=shots)
-
-    return inputs_spam, targets_spam

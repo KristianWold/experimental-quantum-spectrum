@@ -86,7 +86,7 @@ class ProbabilityRValue:
 class KLDiv:
     """KL-Divergence over measured computational basis probabilities"""
 
-    def __call__(self, channel, input, target, normalize=False):
+    def __call__(self, channel, input, target, normalize=True):
         N = target.shape[0]
         U_prep, U_basis = input
 

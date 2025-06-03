@@ -39,16 +39,6 @@ def state_purity(A):
     return purity
 
 
-def effective_rank(channel):
-    choi = channel.choi
-    d2 = choi.shape[0]
-
-    purity = state_purity(choi)
-
-    rank_eff = d2 / purity
-    return rank_eff
-
-
 def channel_to_super_operator(channel_list, invert_list=None):
     if not isinstance(channel_list, list):
         channel_list = [channel_list]
@@ -96,19 +86,6 @@ def channel_fidelity(channel_A, channel_B):
     fidelity = state_fidelity(choi_B, choi_A) / d_squared
 
     return fidelity
-
-
-def channel_steady_state(channel):
-    d = channel.d
-    super_operator = reshuffle(channel.choi)
-    eig, eig_vec = np.linalg.eig(super_operator)
-    steady_index = tf.math.argmax(tf.abs(eig))
-
-    steady_state = eig_vec[:, steady_index]
-    steady_state = steady_state.reshape(d, d)
-    steady_state = steady_state / tf.linalg.trace(steady_state)
-
-    return steady_state
 
 
 class Channel:
@@ -243,59 +220,6 @@ class ChoiMap(Channel):
         return reshuffle(self.super_operator)
 
 
-class IntegrableChoiMap(Channel):
-    def __init__(
-        self,
-        d=None,
-        rank=None,
-        spam=None,
-        trainable=True,
-        generate=True,
-    ):
-        self.d = d
-        self.rank = rank
-
-        if spam is None:
-            spam = IdealSPAM(self.d)
-        self.spam = spam
-        self.I = tf.eye(d, dtype=precision)
-
-        _, self.A, self.B = generate_ginibre(d**2, d**2, trainable=trainable)
-        self.eig = tf.Variable(tf.random.normal((d**2,), 0, 1), trainable=trainable)
-        self.parameter_list = [self.A, self.B, self.eig]
-
-        self.super_operator = None
-        if generate:
-            self.generate_channel()
-
-    def generate_channel(self):
-        G = tf.complex(self.A, self.B) / self.d
-        U = generate_unitary(G=G)
-        eig = tf.cast(tf.abs(self.eig), precision)
-        XX = tf.linalg.diag(eig)
-        XX = tf.matmul(U, XX)
-        XX = tf.matmul(XX, U, adjoint_b=True)
-
-        Y = partial_trace(XX)
-        Y = tf.linalg.sqrtm(Y)
-        Y = tf.linalg.inv(Y)
-        Ykron = kron(self.I, Y)
-
-        choi = Ykron @ XX @ Ykron
-        self.super_operator = reshuffle(choi)
-
-    def apply_channel(self, state):
-        state = tf.reshape(state, (-1, self.d**2, 1))
-        state = tf.matmul(self.super_operator, state)
-        state = tf.reshape(state, (-1, self.d, self.d))
-
-        return state
-
-    @property
-    def choi(self):
-        return reshuffle(self.super_operator)
-
-
 class ChoiMapStatic(Channel):
     def __init__(
         self,
@@ -316,28 +240,6 @@ class ChoiMapStatic(Channel):
         if spam is None:
             spam = IdealSPAM(self.d)
         self.spam = spam
-
-    def apply_channel(self, state):
-        state = tf.reshape(state, (-1, self.d**2, 1))
-        state = tf.matmul(self.super_operator, state)
-        state = tf.reshape(state, (-1, self.d, self.d))
-
-        return state
-
-    @property
-    def choi(self):
-        return reshuffle(self.super_operator)
-
-
-class ReplacementChannel(Channel):
-    def __init__(self, d=None, spam=None):
-        self.d = d
-        if spam is None:
-            spam = IdealSPAM(self.d)
-        self.spam = spam
-
-        choi = tf.eye(d**2, dtype=precision) / self.d
-        self.super_operator = reshuffle(choi)
 
     def apply_channel(self, state):
         state = tf.reshape(state, (-1, self.d**2, 1))
