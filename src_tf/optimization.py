@@ -149,7 +149,7 @@ class ModelQuantumMap:
         self.optimizer.apply_gradients(zip(grads, self.channel.parameter_list))
 
     def zero_optimizer(self):
-        for var in self.optimizer.variables():
+        for var in self.optimizer.variables:
             var.assign(tf.zeros_like(var))
 
     def set_loss_function(self, loss_function, zero_optimizer=True):

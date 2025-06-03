@@ -11,7 +11,6 @@ from tqdm.notebook import tqdm
 from copy import deepcopy
 from set_precision import *
 
-
 from quantum_tools import *
 from utils import *
 from set_precision import *
@@ -214,7 +213,7 @@ class SPAM:
         self.povm.generate_POVM()
 
     def zero_optimizer(self):
-        for var in self.optimizer.variables():
+        for var in self.optimizer.variables:
             var.assign(tf.zeros_like(var))
 
 

@@ -130,26 +130,6 @@ def apply_unitary(state, U):
     return UstateU
 
 
-def attraction(channel, N=1000):
-    d = channel.d
-    I = tf.cast(tf.eye(d, batch_shape=(N,)), dtype=precision) / d
-
-    state_list = []
-    state = np.zeros((d, d))
-    state[0, 0] = 1
-    for i in range(N):
-        U = random_unitary(d).data
-        state_haar = DensityMatrix(U @ state @ U.T.conj()).data
-        state_list.append(state_haar)
-
-    state = tf.convert_to_tensor(state_list)
-
-    state = channel.apply_channel(state)
-    att = tf.math.reduce_mean(state_fidelity(state, I))
-
-    return att
-
-
 def corr_mat_to_povm(corr_mat):
     d = corr_mat.shape[0]
     povm = []
@@ -206,16 +186,6 @@ def add_shot_noise(probs, shots):
     samples = tf.one_hot(samples, probs.shape[1], dtype=precision)
     probs_w_noise = tf.math.reduce_mean(samples, axis=1)
     return probs_w_noise
-
-
-def spectrum_to_radial(spectrum):
-    radial = tf.norm(spectrum, axis=1, ord=2)
-    return radial
-
-
-def spectrum_to_angular(spectrum):
-    angular = tf.math.angle(spectrum[:-1, 0] + 1j * spectrum[:-1, 1])
-    return angular
 
 
 def generate_haar_random(d, rng=np.random.default_rng()):

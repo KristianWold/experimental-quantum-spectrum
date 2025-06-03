@@ -90,10 +90,6 @@ def train_val_split(inputs, targets, ratio=0.9):
     return inputs_train, targets_train, inputs_val, targets_val
 
 
-def average_tensors(tensor_list):
-    pass
-
-
 def saver(object, filename):
     pickle.dump(object, open(filename, "wb"))
 
@@ -110,7 +106,6 @@ FIGURE_ID = "../../latex/figures"
 
 def image_path(fig_id):
     return os.path.join(FIGURE_ID, fig_id)
-
 
 def data_path(data_id):
     return os.path.join(DATA_ID, data_id)

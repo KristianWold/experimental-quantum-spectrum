@@ -40,19 +40,14 @@ def choi_spectrum(channel):
 
     return eig
 
+def spectrum_to_radial(spectrum):
+    radial = tf.norm(spectrum, axis=1, ord=2)
+    return radial
 
-def normalize_spectrum(spectrum, scale=1):
-    spectrum = spectrum.numpy()
-    idx = np.argmax(np.linalg.norm(spectrum, axis=1))
-    spectrum[idx] = (0, 0)
 
-    max = np.max(np.linalg.norm(spectrum, axis=1))
-    spectrum = scale / max * spectrum
-
-    spectrum[idx] = (1, 0)
-    spectrum = tf.cast(tf.convert_to_tensor(spectrum), dtype=precision)
-
-    return spectrum
+def spectrum_to_angular(spectrum):
+    angular = tf.math.angle(spectrum[:-1, 0] + 1j * spectrum[:-1, 1])
+    return angular
 
 
 def complex_spacing_ratio(spectrum, verbose=False, log=True):
@@ -201,37 +196,4 @@ def coat_spectrum(spectrum, sigma=0.1, grid_size=100):
     return rho
 
 
-def hopkins_statistic(spectrum, split=10):
-    angles = np.angle(spectrum)
-    N = len(angles)
-    m = N // split
 
-    idx = np.random.choice(N, m, replace=False)
-    X = angles[idx]
-    Y = np.random.uniform(0, 2 * np.pi, m)
-    distance_X = np.abs(X.reshape(-1, 1) - angles.reshape(1, -1))
-    distance_X[distance_X == 0] = np.inf
-    u = np.min(distance_X, axis=1)
-
-    distance_Y = np.abs(Y.reshape(-1, 1) - angles.reshape(1, -1))
-    w = np.min(distance_Y, axis=1)
-
-    u_sum = np.sum(u)
-    w_sum = np.sum(w)
-
-    hs = u_sum / (u_sum + w_sum)
-
-    return hs, u_sum, w_sum
-
-
-def pauli_string_decomp(eigenvector):
-    d = len(eigenvector)
-    I = tf.cast([[1, 0], [0, 1]], dtype=precision)
-    X = tf.cast([[0, 1], [1, 0]], dtype=precision)
-    Y = tf.cast([[0, -1j], [1j, 0]], dtype=precision)
-    Z = tf.cast([[1, 0], [0, -1]], dtype=precision)
-
-    pauli_single = []
-    pauli_double = []
-    for i in range(d):
-        pass
