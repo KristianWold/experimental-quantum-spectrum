@@ -1,4 +1,0 @@
-# Writing Process
-
-## Todo
-

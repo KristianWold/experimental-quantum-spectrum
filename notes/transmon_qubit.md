@@ -1,2 +1,0 @@
-# Transmon Qubit
-
