@@ -1,4 +1,4 @@
-# Concatenation
+# SPAM benchmarks
 
-Quantum maps are retrieved on real experimental data, stemming from parameterized quantum circuits, and concatenation of such circuits. These circuits were ran on the IBM Belem quantum computers. We show that our retrieved maps predict unseen Pauli string expectation values better than the ideal unitary circuit descriptions.
+Experimentally realistic synthetic data is generated using known state preparation and measurement (SPAM) error models. They are retrived using our SPAM tomography protocol and shown to be consistent with the targets without significant bias or error.
 
