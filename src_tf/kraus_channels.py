@@ -43,7 +43,7 @@ class UnitaryMap(Channel):
 
     def apply_channel(self, state):
         U = tf.reshape(self.U, (1, self.d, self.d))
-        Ustate = tf.matmul(self.U, state)
+        Ustate = tf.matmul(U, state)
         UstateU = tf.matmul(Ustate, self.U, adjoint_b=True)
         state = tf.reduce_sum(UstateU, axis=1)
 

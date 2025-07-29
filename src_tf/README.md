@@ -26,6 +26,10 @@ Various functions for treating and analysing quantum maps.
 
 Functions for creating quantum circuits descriptions, like the parameterized quantum circuit (PQC).
 
+## quantum tools.py
+
+Various helper functions for quantum operations.
+
 ## set_precision.py
 
 Global parameter for model precision, assued to be complex128.
