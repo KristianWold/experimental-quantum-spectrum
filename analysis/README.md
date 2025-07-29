@@ -15,7 +15,7 @@ Reproduces figure 2.
 ## Diluted Unitary
 Quantum maps are retrieved on real experimental data, stemming from parameterized quantum circuits.
 
-Reproduces figure 3, 4 and 8.
+Reproduces figure 3 and 8.
 
 ## Experiments
 
