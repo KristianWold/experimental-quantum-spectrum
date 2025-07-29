@@ -29,3 +29,21 @@ Code, data and analysis scripts for the paper: [Spectra of noisy parameterized q
 ## Overview
 
 This repository contains the source code, data, and analysis scripts for the paper "Spectra of noisy parameterized quantum circuits: Single-Ring universality", which explores the retrival and analysis of quantum processes implemented as quantum circuits on real quantum hardware.
+
+## Repository Structure
+```
+├── analysis/                                       # subfolders containing notebooks, data, and resulting figures
+│   ├── atypical_quantum_maps/  
+│   │   ├── data/                                   # raw experimental and synthetic data
+│   │   ├── figures/                                # figures resulting from notebooks
+│   │   ├── Atypical_Quantum_Maps_Analysis.ipynb    # notebooks for analysis and visualisation
+│   │   └── ...
+│   ├── concatenation/
+│   └── ...
+├── src_tf/                                         # source code                 
+│   ├── README.md
+│   ├── experimental.py                   
+│   └── ...
+├── LICENSE.md
+└── ...
+```
